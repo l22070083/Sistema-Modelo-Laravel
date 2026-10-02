@@ -1,0 +1,3 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><style>body{font-family:DejaVu Sans,sans-serif;font-size:11px}h2{background:#edf2f7;padding:8px}dd{white-space:pre-wrap}</style></head><body><h1>Expediente del alumno</h1>
+@foreach($sections as $section=>$fields)<h2>{{ ucfirst($section) }}</h2>@if($section==='bitacora')@foreach($history as $entry)<p>{{ $entry->fecha }} — {{ $entry->accion }}: {{ $entry->detalles }}</p>@endforeach
+@else<dl>@foreach($fields as $field)<dt>{{ config('dossier.labels.'.$field,$field) }}</dt><dd>{{ $record->$field??'—' }}</dd>@endforeach</dl>@endif @endforeach</body></html>

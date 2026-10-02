@@ -1,0 +1,3 @@
+@extends('layout')
+@section('content')<h1>{{ $student->nombre }} {{ $student->apellidos }}</h1><p>Correo: {{ $student->email }}</p><p>Matrícula: {{ $student->matricula }}</p>@if(auth()->user()->rol_id===1)<a class="btn btn-primary" href="{{ route('alumno.editar',$student->id) }}">Editar perfil</a>@endif
+@if(\App\Services\SectionAccess::can('personales',true)&&\App\Services\SectionAccess::can('antecedentes',true)&&\App\Services\SectionAccess::can('cuestionario',true))<a class="btn btn-outline-primary" href="{{ route('expediente.crear',$student->id) }}">Crear o editar expediente</a>@endif @endsection

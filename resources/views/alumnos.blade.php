@@ -1,0 +1,2 @@
+@extends('layout')
+@section('content')<h1>Alumnos</h1><table class="table"><thead><tr><th>Nombre</th><th>Usuario</th><th>Matrícula</th><th>Acción</th></tr></thead><tbody>@foreach($rows as $student)<tr><td>{{ $student->nombre }} {{ $student->apellidos }}</td><td>{{ $student->username }}</td><td>{{ $student->matricula }}</td><td><a href="{{ route('alumno.ver',$student->id) }}">Ver</a></td></tr>@endforeach</tbody></table>{{ $rows->links() }}@endsection

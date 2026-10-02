@@ -1,0 +1,5 @@
+@extends('layout')
+@section('content')<h1>Exportación de reportes</h1><form method="post" action="{{ route('reportes.exportar') }}" class="card card-body">@csrf
+<label>Tipo de reporte<select class="form-select mb-3" name="tipo"><option value="alumnos">Alumnos</option>@if(\App\Services\SectionAccess::can('clasificacion'))<option value="salud">Respuestas y alertas de salud</option><option value="atencion">Atención estudiantil</option>@endif</select></label>
+<label>Nombre del alumno<input class="form-control mb-3" name="q" maxlength="255"></label><label>Licenciatura<select class="form-select mb-3" name="licenciatura_id"><option value="">Todas</option>@foreach($licenciaturas as $l)<option value="{{ $l->id }}">{{ $l->nombre }}</option>@endforeach</select></label>
+<label>Motivo del reporte<textarea class="form-control mb-3" name="motivo" required maxlength="2000"></textarea></label><label>Formato<select class="form-select mb-3" name="formato"><option value="xlsx">Excel</option><option value="pdf">PDF</option></select></label><button class="btn btn-primary">Generar y registrar auditoría</button></form>@endsection
