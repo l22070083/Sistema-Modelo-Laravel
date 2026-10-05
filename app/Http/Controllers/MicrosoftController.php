@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Services\Audit;
 use App\Services\MicrosoftIdentity;
+use App\Services\MicrosoftTransportException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -57,9 +58,12 @@ class MicrosoftController extends Controller
                 ? 'El inicio de sesión con Microsoft fue cancelado. Puedes intentarlo de nuevo.'
                 : 'Microsoft no pudo completar el inicio de sesión. Inténtalo de nuevo desde el botón «Continuar con Microsoft».');
         }
+        $stage = 'intercambio';
         try {
             $tokens = $identity->exchange($code, $session['verifier'], $session['redirect_uri']);
+            $stage = 'identidad';
             $claims = $identity->verify($tokens['id_token'], $session['nonce']);
+            $stage = 'vinculacion';
             $criteria = ['proveedor' => 'microsoft', 'tenant_id' => strtolower($claims['tid']), 'subject_id' => strtolower($claims['oid'])];
             $binding = DB::table('identidad_externa')->where($criteria)->first();
             if ($session['link_user_id'] !== null) {
@@ -75,15 +79,16 @@ class MicrosoftController extends Controller
                 return redirect()->route('perfil')->with('success', 'Cuenta Microsoft vinculada.');
             }
             if (! $binding) {
-                $profile = $identity->profile($tokens['access_token']);
-                abort_unless(strcasecmp((string) ($profile['id'] ?? ''), $claims['oid']) === 0, 403);
+                $stage = 'perfil';
+                $profile = $identity->registrationProfile($claims, $tokens['access_token']);
                 $email = $profile['mail'] ?? $profile['userPrincipalName'] ?? null;
                 if (! is_string($email) || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    throw new \RuntimeException('Correo inválido.');
+                    return redirect()->route('login')->with('error', 'Tu cuenta Microsoft no proporcionó un correo válido. Puedes usar el registro local o una cuenta Microsoft con correo.');
                 }
                 if (User::where('email', $email)->exists()) {
                     return redirect()->route('login')->with('error', 'Inicia sesión con tu cuenta local y vincula Microsoft desde tu perfil.');
                 }
+                $stage = 'registro';
                 DB::transaction(function () use ($criteria, $profile, $email): void {
                     $user = new User;
                     $user->nombre = $profile['givenName'] ?? $profile['displayName'] ?? 'Alumno';
@@ -102,6 +107,7 @@ class MicrosoftController extends Controller
 
                 return redirect()->route('login')->with('success', RegistrationController::NOTICE);
             }
+            $stage = 'acceso';
             $user = User::findOrFail($binding->user_id);
             if ($user->status === 5 || ($user->status === 0 && $user->verification_token)) {
                 return redirect()->route('login')->with('success', RegistrationController::NOTICE);
@@ -113,7 +119,11 @@ class MicrosoftController extends Controller
 
             return redirect()->route($user->rol_id === User::ALUMNO ? 'inicio' : 'panel');
         } catch (\Throwable $error) {
-            logger()->error('Falló Microsoft', ['tipo' => get_class($error)]);
+            $diagnostic = ['tipo' => get_class($error), 'etapa' => $stage];
+            if ($error instanceof MicrosoftTransportException) {
+                $diagnostic += ['curl' => $error->curlCode, 'http' => $error->httpStatus, 'oauth' => $error->oauthError];
+            }
+            logger()->error('Falló Microsoft', $diagnostic);
 
             return redirect()->route('login')->with('error', 'No se pudo verificar tu cuenta Microsoft. Revisa su configuración y estado.');
         }

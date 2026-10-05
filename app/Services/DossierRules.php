@@ -21,7 +21,7 @@ class DossierRules
 
     public static function validate(array $data, array $fields): array
     {
-        $required = ['nombres', 'apellidos', 'fecha_nacimiento', 'genero', 'estado_civil', 'licenciatura_id', 'domicilio', 'telefono', 'contacto_emergencia_nombre', 'contacto_emergencia_parentesco', 'contacto_emergencia_telefono', 'religion', 'apnp_habitos_toxicos', 'apnp_estilo_vida', 'apnp_condiciones_vivienda', 'apnp_tipo_sangre', 'apnp_factor_rh', 'app_alergias', 'app_enfermedades_cronicas', 'app_cirugias_previas', 'app_traumatismos', 'app_transfusiones', 'q8_red_apoyo', 'q10_estado_emocional'];
+        $required = ['nombres', 'apellidos', 'fecha_nacimiento', 'genero', 'estado_civil', 'licenciatura_id', 'domicilio', 'telefono', 'contacto_emergencia_nombre', 'contacto_emergencia_parentesco', 'contacto_emergencia_telefono', 'religion', 'apnp_tipo_sangre', 'apnp_factor_rh', 'q8_red_apoyo', 'q10_estado_emocional'];
         $rules = [];
         foreach ($fields as $field) {
             $rules[$field] = [in_array($field, $required, true) ? 'required' : 'nullable', 'string', 'max:10000'];

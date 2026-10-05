@@ -53,6 +53,7 @@ Route::middleware(['auth', 'role:1,2'])->group(function () {
     Route::get('/alertas', [ReportController::class, 'alerts'])->name('alertas');
 });
 Route::middleware(['auth', 'role:1'])->group(function () {
+    Route::match(['get', 'post'], '/alumnos/crear', [StudentController::class, 'create'])->name('alumno.create');
     Route::get('/catalogos/{catalog}', [CatalogController::class, 'index'])->name('catalogo');
     Route::get('/catalogos/{catalog}/{id}', [CatalogController::class, 'edit'])->name('catalogo.edit');
     Route::post('/catalogos/{catalog}/{id?}', [CatalogController::class, 'save'])->name('catalogo.save');

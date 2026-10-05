@@ -7,11 +7,11 @@
 <div class="dossier-header-top"><span class="dossier-avatar"><x-icon name="person"/></span><div>
 <h1>{{ isset($sections['personales'])?trim($record->nombres.' '.$record->apellidos):'Expediente #'.$record->id }}</h1>
 <div class="dossier-meta">@if(isset($sections['personales']))<span>Matrícula: <strong>{{ $student?->matricula?:'N/I' }}</strong></span><span>Licenciatura: <strong>{{ $degree?:'N/I' }}</strong></span><span>Edad: <strong>{{ $record->edad?:'N/I' }} años</strong></span>@endif
-@if(isset($sections['antecedentes']))<span>Sangre: <strong>{{ $record->apnp_tipo_sangre }} {{ $record->apnp_factor_rh }}</strong></span>@endif</div>
+@if(isset($sections['personales']))<span>Sangre: <strong>{{ $record->apnp_tipo_sangre }} {{ $record->apnp_factor_rh }}</strong></span>@endif</div>
 </div></div>
 <div class="dossier-header-actions">
 @if($own || \App\Services\SectionAccess::can('personales'))<a class="btn btn-outline-light" href="{{ $own?route('mi-constancia'):route('expediente.constancia',$record->id) }}">Imprimir constancia</a>@endif
-@if(!$record->archivado_at && ($own?!$record->bloqueado:\App\Services\SectionAccess::can('personales',true)||\App\Services\SectionAccess::can('antecedentes',true)||\App\Services\SectionAccess::can('cuestionario',true)))<a class="btn btn-warning ms-2" href="{{ $own?route('mi-expediente.editar'):route('expediente.editar',$record->id) }}">Modificar / Editar</a>@endif
+@if(!$record->archivado_at && ($own?!$record->bloqueado:\App\Services\SectionAccess::can('personales',true)||\App\Services\SectionAccess::can('cuestionario',true)))<a class="btn btn-warning ms-2" href="{{ $own?route('mi-expediente.editar'):route('expediente.editar',$record->id) }}">Modificar / Editar</a>@endif
 <span class="dossier-status {{ !$record->bloqueado&&!$record->archivado_at?'editable':'' }}">{{ $record->archivado_at?'Expediente archivado':($record->bloqueado?'Expediente Protegido por Coordinación':'Expediente Registrado') }}</span>
 @if($record->bloqueado&&$own)<span>Solicita a tu coordinador una actualización si necesitas corregir información.</span>@endif
 <small class="dossier-registered">Registrado el {{ \Carbon\Carbon::parse($record->created_at)->locale('es')->translatedFormat('j \d\e F \d\e Y') }}</small>
@@ -23,17 +23,12 @@
 @if($record->categoria_manual)<small class="d-block text-muted mt-2">Valoración institucional</small>@endif
 </div></section>@endif
 @if(isset($sections['personales']))<section class="dossier-card emergency"><h2>Contacto de Emergencia</h2><div class="dossier-card-body"><strong>{{ $record->contacto_emergencia_nombre?:'N/I' }}</strong><div>Parentesco: {{ $record->contacto_emergencia_parentesco?:'N/I' }}</div><span class="emergency-phone">Tel: {{ $record->contacto_emergencia_telefono?:'N/I' }}</span></div></section>@endif
-@if(isset($sections['antecedentes']))<section class="dossier-card clinical"><h2>Parámetros Clínicos Críticos</h2><div class="dossier-card-body"><p><strong>Grupo Sanguíneo:</strong> <span class="badge bg-danger">{{ $record->apnp_tipo_sangre }} {{ $record->apnp_factor_rh }}</span></p><strong>Alergias Conocidas:</strong><p class="dossier-summary-text">{{ $record->app_alergias?:'Sin información' }}</p><strong>Enfermedades Crónicas:</strong><p class="dossier-summary-text">{{ $record->app_enfermedades_cronicas?:'Sin información' }}</p>@if(isset($sections['personales']))<strong>Creencias / Restricciones Médicas:</strong><p class="text-danger mb-0">{{ $record->religion?:'Ninguna especificada' }}</p>@endif</div></section>@endif
 @if($own||isset($sections['bitacora']))<section class="dossier-card revisions"><h2>Historial de Revisiones</h2><div class="dossier-card-body">@forelse($revisions as $revision)<div class="revision-entry"><strong>{{ ['REGISTRO_INICIAL'=>'Registro inicial','EDICION_ALUMNO'=>'Actualización por Alumno','EDICION_INSTITUCIONAL'=>'Actualización institucional','CLASIFICAR'=>'Clasificación','NOTA'=>'Seguimiento'][ $revision->accion ]??str_replace('_',' ',$revision->accion) }}</strong><small>{{ \Carbon\Carbon::parse($revision->fecha)->locale('es')->diffForHumans() }}</small></div>@empty<p class="mb-0 text-muted">Sin revisiones registradas.</p>@endforelse</div></section>@endif
 </aside><section class="dossier-card"><h2>Contenido Detallado del Expediente</h2><div class="dossier-content-body">
 @php
     $detailGroups=[];
     if(isset($sections['personales'])) $detailGroups['1. Datos Personales y Contacto']=$sections['personales'];
     if(isset($sections['cuestionario'])) $detailGroups['2. Cuestionario de Salud y Bienestar Estudiantil']=$sections['cuestionario'];
-    if(isset($sections['antecedentes'])) {
-        $detailGroups['3. Antecedentes Personales No Patológicos (APNP)']=array_filter($sections['antecedentes'],fn($field)=>str_starts_with($field,'apnp_'));
-        $detailGroups['4. Antecedentes Personales Patológicos (APP)']=array_filter($sections['antecedentes'],fn($field)=>str_starts_with($field,'app_'));
-    }
     if(isset($sections['notas'])) $detailGroups['Notas de Seguimiento']=$sections['notas'];
 @endphp
 @foreach($detailGroups as $title=>$fields)<details class="dossier-section" @if($loop->first) open @endif><summary>{{ $title }}</summary><dl class="dossier-field-grid">
@@ -60,8 +55,8 @@
 @if($action==='nota')<label>Nota<textarea class="form-control mb-3" name="nota" required maxlength="10000"></textarea></label>@endif
 @if($action==='clasificar')
 <p>La valoración institucional prevalece sobre la clasificación automática, incluso cuando el alumno actualice sus respuestas.</p>
-@foreach(['Sin dato de alarma','Atención Psicopedagógica','Salud Física','Atención Emocional'] as $category)<label><input type="checkbox" name="categorias[]" value="{{ $category }}" @checked(in_array($category,json_decode($record->categoria_manual?:$record->categoria_atencion,true)?:[],true))> {{ $category }}</label>@endforeach
-<input type="hidden" name="prioritaria" value="0"><label><input type="checkbox" name="prioritaria" value="1" @checked($record->atencion_prioritaria)> Requiere atención prioritaria</label>
+@foreach(['Sin dato de alarma','Atención Psicopedagógica','Salud Física','Atención Emocional'] as $category)<label class="choice-label"><input type="checkbox" name="categorias[]" value="{{ $category }}" @checked(in_array($category,json_decode($record->categoria_manual?:$record->categoria_atencion,true)?:[],true))> {{ $category }}</label>@endforeach
+<input type="hidden" name="prioritaria" value="0"><label class="choice-label"><input type="checkbox" name="prioritaria" value="1" @checked($record->atencion_prioritaria)> Requiere atención prioritaria</label>
 @endif
 @if($action==='bloqueo')<label>Estado<select class="form-select" name="bloqueado"><option value="1">Bloqueado</option><option value="0">Editable por el alumno</option></select></label>@endif
 <label>Motivo<textarea name="motivo" class="form-control my-3" required maxlength="2000"></textarea></label><button class="btn btn-secondary">{{ $label }}</button></form>

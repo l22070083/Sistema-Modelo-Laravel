@@ -1,6 +1,7 @@
 @php
     $staff = auth()->check() ? in_array(auth()->user()->rol_id,[1,2],true) : ($administrative ?? false);
     $bareLogin = !auth()->check() && ($administrative ?? false);
+    $startRoute = auth()->check() ? ($staff ? 'panel' : 'inicio') : 'login';
 @endphp
 <!doctype html><html lang="es"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,17 +9,22 @@
 <link rel="stylesheet" href="{{ asset('css/bootstrap.min.css') }}">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('css/modelo.css') }}">
+<link rel="stylesheet" href="{{ asset('css/responsive.css') }}?v={{ filemtime(public_path('css/responsive.css')) }}">
+<script src="{{ asset('js/modelo.js') }}?v={{ filemtime(public_path('js/modelo.js')) }}" defer></script>
 @stack('styles')
 </head><body class="{{ $staff?'staff-shell':'student-shell' }} {{ $bareLogin?'admin-login-page':'' }} {{ request()->routeIs('panel')?'dashboard-page':'' }}">
 @include('partials.icons')
 @unless($bareLogin)
-<header class="modelo-header"><nav class="modelo-nav {{ $staff?'staff-nav':'student-nav' }}" aria-label="Navegación principal">
-<a class="modelo-brand" href="{{ route('home') }}"><img src="{{ asset('img/Logo.png') }}" alt="Escudo Escuela Modelo"><span>@if($staff)<strong>ESCUELA MODELO</strong><small>VALLADOLID</small>@else<strong>Universidad Modelo</strong><small>Campus Valladolid • Coordinación</small>@endif</span></a>
+<header class="modelo-header"><nav class="modelo-nav {{ $staff?'staff-nav':'student-nav' }}" aria-label="Navegación principal" data-responsive-nav>
+<a class="modelo-brand" href="{{ route($startRoute) }}"><img src="{{ asset('img/Logo.png') }}" alt="Escudo Escuela Modelo"><span>@if($staff)<strong>ESCUELA MODELO</strong><small>VALLADOLID</small>@else<strong>Universidad Modelo</strong><small>Campus Valladolid • Coordinación</small>@endif</span></a>
+<button class="modelo-menu-toggle" type="button" aria-controls="modelo-navigation" aria-expanded="false" aria-label="Mostrar menú principal" hidden><span class="modelo-menu-bars" aria-hidden="true"><span></span><span></span><span></span></span><span class="modelo-menu-label">Menú</span></button>
+<div class="modelo-navigation" id="modelo-navigation">
 <div class="modelo-links">
-<a href="{{ route('home') }}" class="{{ request()->routeIs('home','inicio','panel')?'active':'' }}">@if($staff)<x-icon name="home"/>@endif Inicio</a>
+<a href="{{ route($startRoute) }}" class="{{ request()->routeIs($startRoute)?'active':'' }}">@if($staff)<x-icon name="home"/>@endif Inicio</a>
 @auth
 @if($staff)
     @if(auth()->user()->rol_id===1)
+        <a href="{{ route('administradores') }}"><x-icon name="users"/>Administradores</a>
         <a href="{{ route('coordinadores') }}"><x-icon name="users"/>Coordinadores</a>
         <a href="{{ route('encuestas') }}"><x-icon name="file"/>Encuestas y preguntas</a>
         @foreach(['grupo'=>'Grupos','licenciatura'=>'Licenciaturas','genero'=>'Géneros'] as $catalog=>$label)<a href="{{ route('catalogo',$catalog) }}"><x-icon name="school"/>{{ $label }}</a>@endforeach
@@ -45,6 +51,7 @@
 @else
 <a class="btn btn-outline-light btn-sm nav-session" href="{{ route('login') }}">Entrar</a>
 @endauth
+</div>
 </nav></header>
 @endunless
 <main class="modelo-main {{ $bareLogin?'login-main':'' }} {{ request()->routeIs('home','inicio')&&!$staff?'portal-main':'' }}">

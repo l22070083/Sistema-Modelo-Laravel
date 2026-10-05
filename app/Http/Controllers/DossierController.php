@@ -67,7 +67,7 @@ class DossierController extends Controller
     {
         $sections = [];
         foreach (config('dossier.sections') as $name => $fields) {
-            if ($request->user()->rol_id === 3 ? in_array($name, ['personales', 'antecedentes', 'cuestionario'], true) : SectionAccess::can($name, $edit)) {
+            if ($request->user()->rol_id === 3 ? in_array($name, ['personales', 'cuestionario'], true) : SectionAccess::can($name, $edit)) {
                 $sections[$name] = $fields;
             }
         }
@@ -102,7 +102,7 @@ class DossierController extends Controller
         } else {
             abort_unless($request->user()->rol_id === 3 || $creatingFor, 404);
         }
-        $sections = array_intersect_key($this->sections($request, true), array_flip(['personales', 'antecedentes', 'cuestionario']));
+        $sections = array_intersect_key($this->sections($request, true), array_flip(['personales', 'cuestionario']));
         abort_unless($sections, 403);
         if ($request->isMethod('post')) {
             $request->validate(['datos' => 'required|array', 'motivo' => ($request->user()->rol_id === 3 ? 'nullable' : 'required').'|string|max:2000', 'version' => 'nullable|string|max:128']);
@@ -153,7 +153,7 @@ class DossierController extends Controller
     public function create(Request $request, int $student): View|RedirectResponse
     {
         User::where('rol_id', 3)->findOrFail($student);
-        foreach (['personales', 'antecedentes', 'cuestionario'] as $section) {
+        foreach (['personales', 'cuestionario'] as $section) {
             SectionAccess::require($section, true);
         }
         $record = DB::table('expediente_alumno')->where('user_id', $student)->first();

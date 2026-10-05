@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\AccountCreator;
 use App\Services\SectionAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -10,6 +11,19 @@ use Illuminate\View\View;
 
 class StudentController extends Controller
 {
+    public function create(Request $request): View|RedirectResponse
+    {
+        abort_unless($request->user()->rol_id === User::ADMIN, 403);
+        if ($request->isMethod('post')) {
+            $rules = array_merge(RegistrationController::profileRules(), ['apellidos' => ['required', 'string', 'max:255']]);
+            $student = AccountCreator::create(AccountCreator::validate($request, $rules), User::ALUMNO);
+
+            return redirect()->route('alumno.ver', $student->id)->with('success', 'Alumno creado y activo. Ya puede iniciar sesión.');
+        }
+
+        return view('alumno-crear', RegistrationController::catalogs());
+    }
+
     public function index(): View
     {
         SectionAccess::require('personales');

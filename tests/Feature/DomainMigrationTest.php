@@ -46,7 +46,7 @@ class DomainMigrationTest extends TestCase
     private function dossier(User $student): array
     {
         $data = [];
-        foreach (array_merge(...array_values(array_intersect_key(config('dossier.sections'), array_flip(['personales', 'antecedentes', 'cuestionario'])))) as $field) {
+        foreach (array_merge(...array_values(array_intersect_key(config('dossier.sections'), array_flip(['personales', 'cuestionario'])))) as $field) {
             $data[$field] = 'Dato de prueba';
         }
         foreach (array_keys($data) as $field) {
@@ -64,6 +64,82 @@ class DomainMigrationTest extends TestCase
         $this->actingAs($student)->post('/mi-expediente/editar', ['datos' => $this->dossier($student)])->assertRedirect('/mi-expediente');
 
         return DB::table('expediente_alumno')->where('user_id', $student->id)->value('id');
+    }
+
+    public function test_dossier_form_and_pdf_keep_blood_in_personal_data_and_remove_antecedents(): void
+    {
+        $student = $this->student();
+        $id = $this->createDossier($student);
+        DB::table('expediente_alumno')->where('id', $id)->update(['app_alergias' => 'CONTENIDO_APP_RETIRADO', 'apnp_estilo_vida' => 'CONTENIDO_APNP_RETIRADO']);
+        $response = $this->get('/mi-expediente')->assertOk()->assertSee('Tipo de Sangre')->assertSee('Factor RH')
+            ->assertDontSee('Antecedentes Personales')->assertDontSee('Parámetros Clínicos Críticos')
+            ->assertDontSee('CONTENIDO_APP_RETIRADO')->assertDontSee('CONTENIDO_APNP_RETIRADO');
+        $form = $this->get('/mi-expediente/editar')->assertOk()->assertDontSee('app_alergias')->assertDontSee('apnp_estilo_vida');
+        $document = new \DOMDocument;
+        @$document->loadHTML($form->getContent());
+        $xpath = new \DOMXPath($document);
+        $this->assertSame(2, $xpath->query('//fieldset')->length);
+        foreach (['apnp_tipo_sangre', 'apnp_factor_rh'] as $field) {
+            $this->assertSame(1, $xpath->query('//fieldset[legend[contains(., "Datos personales")]]//select[@name="datos['.$field.']"]')->length);
+        }
+        $pdfSource = view('expediente-pdf', ['record' => $response->viewData('record'), 'sections' => $response->viewData('sections'), 'history' => collect()])->render();
+        $this->assertStringContainsString('Datos personales y contacto', $pdfSource);
+        $this->assertStringContainsString('Tipo de Sangre', $pdfSource);
+        $this->assertStringNotContainsString('CONTENIDO_APP_RETIRADO', $pdfSource);
+        $this->assertStringNotContainsString('CONTENIDO_APNP_RETIRADO', $pdfSource);
+        $this->actingAs($this->admin())->get('/expedientes/'.$id)->assertOk()->assertDontSee('Antecedentes Personales')->assertDontSee('CONTENIDO_APP_RETIRADO');
+        $this->get('/expedientes/'.$id.'/editar')->assertOk()->assertDontSee('app_alergias')->assertDontSee('apnp_estilo_vida');
+    }
+
+    public function test_dossier_saves_two_sections_preserves_history_and_rejects_retired_fields(): void
+    {
+        $student = $this->student();
+        $id = $this->createDossier($student);
+        DB::table('expediente_alumno')->where('id', $id)->update(['app_alergias' => 'HISTORICO_APP', 'apnp_estilo_vida' => 'HISTORICO_APNP']);
+        $record = DB::table('expediente_alumno')->find($id);
+        $data = array_replace($this->dossier($student), ['apnp_tipo_sangre' => 'AB', 'apnp_factor_rh' => 'Negativo (-)']);
+        $this->post('/mi-expediente/editar', ['datos' => $data, 'version' => DossierController::fingerprint($record)])->assertRedirect('/mi-expediente');
+        $this->assertDatabaseHas('expediente_alumno', ['id' => $id, 'user_id' => $student->id, 'apnp_tipo_sangre' => 'AB', 'apnp_factor_rh' => 'Negativo (-)', 'app_alergias' => 'HISTORICO_APP', 'apnp_estilo_vida' => 'HISTORICO_APNP']);
+        $current = DB::table('expediente_alumno')->find($id);
+        foreach (['app_alergias', 'apnp_habitos_toxicos', 'app_cirugias_previas', 'apnp_inmunizaciones', 'app_transfusiones'] as $field) {
+            $this->post('/mi-expediente/editar', ['datos' => $data + [$field => 'Cambio no permitido'], 'version' => DossierController::fingerprint($current)])->assertForbidden();
+        }
+        $this->post('/frontend/web/index.php?r=expediente/editar', ['ExpedienteAlumno' => $data + ['app_alergias' => 'Cambio legado'], 'version' => DossierController::fingerprint($current)])->assertForbidden();
+        $this->assertSame(2, DB::table('expediente_historial')->where('expediente_id', $id)->count());
+        $this->assertDatabaseHas('expediente_alumno', ['id' => $id, 'app_alergias' => 'HISTORICO_APP']);
+    }
+
+    public function test_blood_is_controlled_by_personal_permissions_and_old_grants_are_retired(): void
+    {
+        $student = $this->student();
+        $id = $this->createDossier($student);
+        $admin = $this->admin();
+        $coordinator = $this->coordinator();
+        DB::table('coordinador_permiso')->insert(['coordinador_id' => $coordinator->id, 'seccion' => 'antecedentes', 'puede_ver' => 1, 'puede_editar' => 1, 'otorgado_por' => $admin->id, 'updated_at' => now()]);
+        $this->actingAs($coordinator)->get('/expedientes/'.$id)->assertForbidden();
+        DB::table('coordinador_permiso')->insert(['coordinador_id' => $coordinator->id, 'seccion' => 'cuestionario', 'puede_ver' => 1, 'puede_editar' => 1, 'otorgado_por' => $admin->id, 'updated_at' => now()]);
+        $this->get('/expedientes/'.$id)->assertOk()->assertDontSee('Tipo de Sangre')->assertDontSee('Sangre:');
+        DB::table('coordinador_permiso')->insert(['coordinador_id' => $coordinator->id, 'seccion' => 'personales', 'puede_ver' => 1, 'puede_editar' => 1, 'otorgado_por' => $admin->id, 'updated_at' => now()]);
+        $this->get('/expedientes/'.$id)->assertOk()->assertSee('Tipo de Sangre');
+        $this->get('/expedientes/'.$id.'/editar')->assertOk()->assertSee('apnp_tipo_sangre')->assertDontSee('app_alergias');
+        $other = $this->student();
+        $this->get('/alumnos/'.$other->id)->assertOk()->assertSee('Crear o editar expediente');
+        $this->post('/alumnos/'.$other->id.'/expediente', ['datos' => $this->dossier($other), 'motivo' => 'Registro con las dos secciones vigentes'])->assertRedirect();
+        $this->assertDatabaseHas('expediente_alumno', ['user_id' => $other->id]);
+        $this->actingAs($admin)->get('/coordinadores/'.$coordinator->id)->assertOk()->assertDontSee('permisos[antecedentes]')->assertSee('Datos personales y contacto');
+        $this->post('/coordinadores/'.$coordinator->id.'/permisos', ['motivo' => 'Intento con sección retirada', 'permisos' => ['antecedentes' => ['ver' => 1]]])->assertSessionHasErrors('permisos');
+    }
+
+    public function test_personal_section_requires_a_valid_blood_group_and_rh(): void
+    {
+        $student = $this->student();
+        $this->actingAs($student);
+        foreach ([['apnp_tipo_sangre', ''], ['apnp_tipo_sangre', 'X'], ['apnp_factor_rh', ''], ['apnp_factor_rh', 'Indefinido']] as [$field, $value]) {
+            $this->post('/mi-expediente/editar', ['datos' => array_replace($this->dossier($student), [$field => $value])])->assertSessionHasErrors($field);
+        }
+        $this->assertSame(0, DB::table('expediente_alumno')->count());
+        $this->post('/mi-expediente/editar', ['datos' => $this->dossier($student)])->assertRedirect('/mi-expediente');
+        $this->assertDatabaseHas('expediente_alumno', ['user_id' => $student->id, 'apnp_tipo_sangre' => 'O', 'apnp_factor_rh' => 'Positivo (+)', 'app_alergias' => null, 'apnp_estilo_vida' => null]);
     }
 
     public function test_registration_email_verification_and_reset_preserve_pending_approval(): void
@@ -321,22 +397,23 @@ class DomainMigrationTest extends TestCase
         openssl_pkey_export($private, $pem, null, $options);
         $details = openssl_pkey_get_details($private);
         $encode = fn ($value) => rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
-        $tenant = '11111111-1111-1111-1111-111111111111';
         $keys = ['keys' => [['kty' => 'RSA', 'alg' => 'RS256', 'kid' => 'test', 'n' => $encode($details['rsa']['n']), 'e' => $encode($details['rsa']['e']), 'issuer' => 'https://login.microsoftonline.com/{tenantid}/v2.0']]];
-        $claims = ['tid' => $tenant, 'oid' => '22222222-2222-2222-2222-222222222222', 'aud' => 'client', 'iss' => 'https://login.microsoftonline.com/'.$tenant.'/v2.0', 'nonce' => 'nonce', 'iat' => time(), 'exp' => time() + 60];
-        $jwt = JWT::encode($claims, $pem, 'RS256', 'test');
-        $service = new MicrosoftIdentity;
-        $this->assertSame($claims['oid'], $service->verifyWithKeys($jwt, 'nonce', $keys)['oid']);
-        $parts = explode('.', $jwt);
-        $parts[2] = $encode(str_repeat('x', 256));
-        foreach ([[$jwt, 'forged'], [implode('.', $parts), 'nonce']] as [$token,$nonce]) {
-            $rejected = false;
-            try {
-                $service->verifyWithKeys($token, $nonce, $keys);
-            } catch (\UnexpectedValueException $error) {
-                $rejected = true;
+        foreach (['11111111-1111-1111-1111-111111111111', MicrosoftIdentity::CONSUMER_TENANT] as $tenant) {
+            $claims = ['tid' => $tenant, 'oid' => '22222222-2222-2222-2222-222222222222', 'aud' => 'client', 'iss' => 'https://login.microsoftonline.com/'.$tenant.'/v2.0', 'nonce' => 'nonce', 'iat' => time(), 'exp' => time() + 60];
+            $jwt = JWT::encode($claims, $pem, 'RS256', 'test');
+            $service = new MicrosoftIdentity;
+            $this->assertSame($claims['oid'], $service->verifyWithKeys($jwt, 'nonce', $keys)['oid']);
+            $parts = explode('.', $jwt);
+            $parts[2] = $encode(str_repeat('x', 256));
+            foreach ([[$jwt, 'forged'], [implode('.', $parts), 'nonce']] as [$token,$nonce]) {
+                $rejected = false;
+                try {
+                    $service->verifyWithKeys($token, $nonce, $keys);
+                } catch (\UnexpectedValueException $error) {
+                    $rejected = true;
+                }
+                $this->assertTrue($rejected, 'Se aceptó un nonce o una firma falsificada.');
             }
-            $this->assertTrue($rejected, 'Se aceptó un nonce o una firma falsificada.');
         }
     }
 }

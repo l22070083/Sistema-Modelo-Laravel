@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpFoundation\Response;
@@ -14,7 +15,12 @@ class LegacyController extends Controller
             return $this->dispatch($request);
         }
 
-        return auth()->check() ? redirect()->route('inicio') : response()->view('portal');
+        $user = auth()->user();
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        return redirect()->route($user->rol_id === User::ALUMNO ? 'inicio' : 'panel');
     }
 
     public function dispatch(Request $request, ?string $area = null): Response
@@ -29,7 +35,7 @@ class LegacyController extends Controller
             'site/signup' => ['registro'], 'site/completar-perfil' => ['perfil'],
             'site/microsoft-login' => ['microsoft.login'], 'site/microsoft-callback' => ['microsoft.callback'], 'site/microsoft-vincular' => ['microsoft.link'],
             'site/verify-email' => ['email.verify', 'token'], 'site/resend-verification-email' => ['email.resend'], 'site/request-password-reset' => ['password.request'], 'site/reset-password' => ['password.reset', 'token'],
-            'alumno/index' => ['alumnos'], 'alumno/view' => ['alumno.ver', 'id'], 'alumno/update' => ['alumno.editar', 'id'],
+            'alumno/index' => ['alumnos'], 'alumno/create' => ['alumno.create'], 'alumno/view' => ['alumno.ver', 'id'], 'alumno/update' => ['alumno.editar', 'id'],
             'alumno/aprobar' => ['notificaciones.alta'], 'notificacion/index' => ['notificaciones'],
             'coordinador/index' => ['coordinadores'], 'coordinador/create' => ['coordinadores'],
             'coordinador/view' => ['coordinador.edit', 'id'], 'coordinador/update' => ['coordinador.edit', 'id'], 'coordinador/permisos' => ['coordinador.edit', 'id'], 'coordinador/asignar-grupo' => ['coordinador.edit', 'id'],
@@ -95,7 +101,7 @@ class LegacyController extends Controller
             $body['permisos'] = $body['Permisos'];
         }
         $body['motivo'] = $body['motivo'] ?? $body['motivo_cambio'] ?? null;
-        if (isset($body['password']) && in_array($action, ['site/signup', 'site/reset-password'], true)) {
+        if (isset($body['password']) && in_array($action, ['site/signup', 'site/reset-password', 'coordinador/create', 'alumno/create'], true)) {
             $body['password_confirmation'] ??= $body['password'];
         }
         if (isset($body['nota_seguimiento'])) {

@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\AccountCreator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
@@ -54,24 +54,20 @@ class AccessController extends Controller
 
     public function crearCoordinador(Request $request)
     {
-        $data = $request->validate([
-            'nombre' => ['required', 'string', 'max:255'], 'apellidos' => ['nullable', 'string', 'max:255'],
-            'username' => ['required', 'string', 'max:255', 'unique:user,username'],
-            'email' => ['required', 'email', 'max:255', 'unique:user,email'],
-            'password' => ['required', 'string', 'min:8', function ($attribute, $value, $fail) {
-                if (strlen($value) > 72 || str_contains($value, "\0") || ! preg_match('/\p{Lu}/u', $value) || ! preg_match('/[\p{P}\p{S}]/u', $value)) {
-                    $fail('Usa una mayúscula, un carácter especial y un máximo de 72 bytes.');
-                }
-            }],
-        ]);
-        $user = new User;
-        $user->fill(collect($data)->except('password')->all());
-        $user->rol_id = User::COORDINADOR;
-        $user->status = User::ACTIVE;
-        $user->password_hash = Hash::make($data['password']);
-        $user->auth_key = bin2hex(random_bytes(16));
-        $user->save();
+        $user = AccountCreator::create(AccountCreator::validate($request), User::COORDINADOR);
 
-        return redirect()->route('coordinadores')->with('success', 'Coordinador dado de alta.');
+        return redirect()->route('coordinador.edit', $user->id)->with('success', 'Coordinador creado y activo. Asigna sus grupos y permisos por sección.');
+    }
+
+    public function administradores()
+    {
+        return view('administradores', ['administradores' => User::where('rol_id', User::ADMIN)->orderBy('nombre')->paginate(20)]);
+    }
+
+    public function crearAdministrador(Request $request)
+    {
+        AccountCreator::create(AccountCreator::validate($request), User::ADMIN);
+
+        return redirect()->route('administradores')->with('success', 'Administrador creado y activo.');
     }
 }

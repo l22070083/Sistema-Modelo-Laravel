@@ -10,6 +10,6 @@
 </article>
 @empty<p>No hay expedientes con clasificación disponible.</p>@endforelse
 @if($results->isNotEmpty())
-<h2 class="h4">Puntajes históricos conservados</h2><table class="table"><thead><tr><th>Alumno</th><th>Nivel registrado</th><th>Estado</th><th>Fecha</th></tr></thead><tbody>@foreach($results as $row)<tr><td>{{ $row->nombre }} {{ $row->apellidos }}</td><td>{{ $row->nivel_riesgo }}</td><td>{{ $row->nivel_riesgo<=3?'estable':($row->nivel_riesgo<=6?'seguimiento':'urgente') }}</td><td>{{ $row->fecha }}</td></tr>@endforeach</tbody></table>
+<h2 class="h4">Puntajes históricos conservados</h2><x-table-scroll label="Resultados históricos de salud"><table class="table"><thead><tr><th>Alumno</th><th>Nivel registrado</th><th>Estado</th><th>Fecha</th></tr></thead><tbody>@foreach($results as $row)<tr><td>{{ $row->nombre }} {{ $row->apellidos }}</td><td>{{ $row->nivel_riesgo }}</td><td>{{ $row->nivel_riesgo<=3?'estable':($row->nivel_riesgo<=6?'seguimiento':'urgente') }}</td><td>{{ $row->fecha }}</td></tr>@endforeach</tbody></table></x-table-scroll>
 @endif
 @endsection

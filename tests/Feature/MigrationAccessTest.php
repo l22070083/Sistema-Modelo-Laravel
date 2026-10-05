@@ -35,12 +35,14 @@ class MigrationAccessTest extends TestCase
 
     public function test_only_admin_can_create_coordinators_and_role_is_fixed(): void
     {
-        $data = ['nombre' => 'Nuevo', 'username' => 'coordinador-nuevo', 'email' => 'nuevo@example.com', 'password' => 'ClaveModelo!2026', 'rol_id' => 1, 'status' => 0];
+        $data = ['nombre' => 'Nuevo', 'username' => 'coordinador-nuevo', 'email' => 'nuevo@example.com', 'password' => 'ClaveModelo!2026', 'password_confirmation' => 'ClaveModelo!2026', 'rol_id' => 1, 'status' => 0];
         foreach ([2, 3] as $role) {
             $this->actingAs($this->user($role))->get('/coordinadores')->assertForbidden();
             $this->post('/coordinadores', $data)->assertForbidden();
         }
-        $this->actingAs($this->user(1))->post('/coordinadores', $data)->assertRedirect('/coordinadores');
+        $this->actingAs($this->user(1))->post('/coordinadores', $data)->assertRedirect();
+        $created = User::where('username', 'coordinador-nuevo')->firstOrFail();
+        $this->get('/coordinadores/'.$created->id)->assertOk();
         $this->assertDatabaseHas('user', ['username' => 'coordinador-nuevo', 'rol_id' => 2, 'status' => 10]);
     }
 

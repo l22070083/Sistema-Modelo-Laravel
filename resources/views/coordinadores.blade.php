@@ -8,21 +8,18 @@
 <div class="col-md-6"><label for="motivo-designacion" class="form-label">Motivo de designación</label><textarea id="motivo-designacion" name="motivo" class="form-control" required maxlength="2000"></textarea></div>
 <div><button class="btn btn-primary">Designar coordinador y configurar permisos</button></div>
 </form></section>
-<div class="card mb-4"><div class="card-body">
-<h2 class="h5">Dar de alta a un coordinador</h2>
+<div class="card mb-4" id="nuevo-coordinador"><div class="card-body">
+<h2 class="h5">Crear coordinador</h2>
+<p>La cuenta quedará activa. Después podrás asignar sus grupos y permisos por sección.</p>
 <form method="post" action="{{ route('coordinadores.create') }}" class="row g-3">@csrf
-@foreach(['nombre' => 'Nombre', 'apellidos' => 'Apellidos', 'username' => 'Usuario', 'email' => 'Correo'] as $field => $label)
-    <div class="col-md-6"><label class="form-label" for="{{ $field }}">{{ $label }}</label>
-    <input class="form-control" id="{{ $field }}" name="{{ $field }}" value="{{ old($field) }}" type="{{ $field === 'email' ? 'email' : 'text' }}" maxlength="255" @if($field !== 'apellidos') required @endif></div>
-@endforeach
-    <div class="col-md-6"><label class="form-label" for="password">Contraseña</label><input class="form-control" id="password" name="password" type="password" required autocomplete="new-password"><small>Al menos 8 caracteres, una mayúscula y un carácter especial.</small></div>
-    <div class="col-12"><button class="btn btn-primary">Dar de alta</button></div>
+    @include('partials.account-fields')
+    <div class="col-12"><button class="btn btn-primary">Crear coordinador y configurar permisos</button></div>
 </form>
 </div></div>
-<div class="table-responsive"><table class="table"><thead><tr><th>Nombre</th><th>Usuario</th><th>Correo</th><th>Estado</th></tr></thead><tbody>
+<x-table-scroll label="Listado de coordinadores"><table class="table"><thead><tr><th>Nombre</th><th>Usuario</th><th>Correo</th><th>Estado</th></tr></thead><tbody>
 @forelse($coordinadores as $coordinador)
 <tr><td><a href="{{ route('coordinador.edit',$coordinador->id) }}">{{ $coordinador->nombre }} {{ $coordinador->apellidos }}</a></td><td>{{ $coordinador->username }}</td><td>{{ $coordinador->email }}</td><td>{{ $coordinador->status === 10 ? 'Activo' : 'Inactivo' }}</td></tr>
 @empty<tr><td colspan="4">No hay coordinadores registrados.</td></tr>@endforelse
-</tbody></table></div>
+</tbody></table></x-table-scroll>
 {{ $coordinadores->links() }}
 @endsection

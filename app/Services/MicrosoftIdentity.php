@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Cache;
 /** Verifica firma y claims antes de utilizar la identidad estable. */
 class MicrosoftIdentity
 {
+    public const CONSUMER_TENANT = '9188040d-6c67-4c5b-b112-36a304b66dad';
+
     public const JWKS_URL = 'https://login.microsoftonline.com/common/discovery/v2.0/keys';
 
     public function exchange(string $code, string $verifier, string $redirectUri): array
@@ -70,12 +72,40 @@ class MicrosoftIdentity
         if (! in_array($tenant, ['common', 'organizations', 'consumers'], true) && strcasecmp($tenant, $claims['tid']) !== 0) {
             throw new \UnexpectedValueException('Tenant no autorizado.');
         }
-        $consumerTenant = '9188040d-6c67-4c5b-b112-36a304b66dad';
-        if (($tenant === 'organizations' && $claims['tid'] === $consumerTenant) || ($tenant === 'consumers' && $claims['tid'] !== $consumerTenant)) {
+        $isPersonal = strcasecmp($claims['tid'], self::CONSUMER_TENANT) === 0;
+        if (($tenant === 'organizations' && $isPersonal) || ($tenant === 'consumers' && ! $isPersonal)) {
             throw new \UnexpectedValueException('Tipo de cuenta no autorizado.');
         }
 
         return $claims;
+    }
+
+    /** Datos de contacto de una identidad que ya pasó la validación del token. */
+    public function registrationProfile(array $claims, string $accessToken): array
+    {
+        if (strcasecmp($claims['tid'], self::CONSUMER_TENANT) === 0) {
+            // Las cuentas personales pueden usar el perfil del token sin consultar Graph.
+            // El correo es solo de contacto: la vinculación usa siempre tid y oid.
+            $email = null;
+            foreach ([$claims['email'] ?? null, $claims['preferred_username'] ?? null] as $candidate) {
+                if (is_string($candidate) && filter_var($candidate, FILTER_VALIDATE_EMAIL)) {
+                    $email = $candidate;
+                    break;
+                }
+            }
+
+            return ['id' => $claims['oid'], 'mail' => $email,
+                'displayName' => $claims['name'] ?? 'Alumno',
+                'givenName' => $claims['given_name'] ?? $claims['name'] ?? 'Alumno',
+                'surname' => $claims['family_name'] ?? ''];
+        }
+
+        $profile = $this->profile($accessToken);
+        if (! is_string($profile['id'] ?? null) || strcasecmp($profile['id'], $claims['oid']) !== 0) {
+            throw new \UnexpectedValueException('El perfil Microsoft no corresponde a la identidad validada.');
+        }
+
+        return $profile;
     }
 
     public function profile(string $accessToken): array

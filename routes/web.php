@@ -29,6 +29,8 @@ Route::middleware(['auth', 'role:1,2'])->group(function () {
     Route::post('/notificaciones/alta', [NotificationController::class, 'approve'])->name('notificaciones.alta');
 });
 Route::middleware(['auth', 'role:1'])->group(function () {
+    Route::get('/administradores', [AccessController::class, 'administradores'])->name('administradores');
+    Route::post('/administradores', [AccessController::class, 'crearAdministrador'])->name('administradores.create');
     Route::post('/coordinadores/designar', [CoordinatorController::class, 'designate'])->name('coordinadores.designar');
     Route::get('/coordinadores', [AccessController::class, 'coordinadores'])->name('coordinadores');
     Route::post('/coordinadores', [AccessController::class, 'crearCoordinador'])->name('coordinadores.create');
