@@ -4,20 +4,6 @@
 
 @section('content')
 
-<h1>Resultados y valoración de salud</h1>
-<p>La clasificación se obtiene del expediente: salud física (1, 3, 4, 5), socioemocional (2, 9, 10 y apoyo psicológico en 11) y psicopedagógica (6, 7 y apoyo de aprendizaje en 11). El administrador o coordinador autorizado puede determinar la clasificación y la prioridad.</p>
-@forelse($assessments as $row)
-<article class="card card-body mb-3"><h2 class="h5">{{ $row->nombre }} {{ $row->apellidos }}</h2>
-<p>{{ implode(', ',json_decode($row->categoria_manual?:$row->categoria_atencion,true)?:[]) }} — {{ $row->atencion_prioritaria?'Atención prioritaria':'Sin prioridad marcada' }}</p>
-@if($row->categoria_manual)<p>Valoración institucional por {{ $row->valorado_por }}. Esta valoración prevalece sobre la automática.</p>@endif
-@if(auth()->user()->rol_id!==3 && \App\Services\SectionAccess::can('clasificacion',true))<a href="{{ route('expediente.ver',$row->id) }}" class="btn btn-outline-primary">Valorar o modificar clasificación y riesgo</a>@endif
-</article>
-@empty<p>No hay expedientes con clasificación disponible.</p>@endforelse
-@if($results->isNotEmpty())
-<h2 class="h4">Puntajes históricos conservados</h2><x-table-scroll label="Resultados históricos de salud"><table class="table"><thead><tr><th>Alumno</th><th>Nivel registrado</th><th>Estado</th><th>Fecha</th></tr></thead><tbody>@foreach($results as $row)<tr><td>{{ $row->nombre }} {{ $row->apellidos }}</td><td>{{ $row->nivel_riesgo }}</td><td>{{ $row->nivel_riesgo<=3?'estable':($row->nivel_riesgo<=6?'seguimiento':'urgente') }}</td><td>{{ $row->fecha }}</td></tr>@endforeach</tbody></table></x-table-scroll>
-@endif
-
-
 <style>
     :root {
         --results-blue: #174a88;
@@ -442,276 +428,205 @@
 </style>
 
 <div class="results-page">
+    <div class="results-container">
 
+        {{-- Encabezado --}}
+        <div class="results-header">
+            <div class="results-header-content">
+                <div class="results-icon">🩺</div>
 
-<div class="results-container">
-
-    {{-- Encabezado --}}
-    <div class="results-header">
-
-        <div class="results-header-content">
-
-            <div class="results-icon">
-                🩺
-            </div>
-
-            <div>
-                <h1>Resultados y valoración de salud</h1>
-
-                <p>
-                    Consulta la clasificación, valoración institucional
-                    y nivel de prioridad de los expedientes.
-                </p>
-            </div>
-
-        </div>
-
-    </div>
-
-    {{-- Información --}}
-    <div class="information-card">
-
-        <div class="information-title">
-            <span>ⓘ</span>
-            <span>Criterios de clasificación</span>
-        </div>
-
-        <p>
-            La clasificación se obtiene del expediente:
-            <strong>salud física</strong> (1, 3, 4, 5),
-            <strong>socioemocional</strong> (2, 9, 10 y apoyo psicológico en 11)
-            y <strong>psicopedagógica</strong> (6, 7 y apoyo de aprendizaje en 11).
-            El administrador o coordinador autorizado puede determinar la
-            clasificación y la prioridad.
-        </p>
-
-    </div>
-
-    {{-- Valoraciones --}}
-    <div class="section-heading">
-
-        <h2>Valoración actual</h2>
-
-        <span>
-            Expedientes con clasificación disponible
-        </span>
-
-    </div>
-
-    @forelse($assessments as $row)
-
-        @php
-            $categorias = json_decode(
-                $row->categoria_manual ?: $row->categoria_atencion,
-                true
-            ) ?: [];
-        @endphp
-
-        <article class="assessment-card">
-
-            <div class="assessment-top">
-
-                <div class="student-info">
-
-                    <h3>
-                        {{ $row->nombre }} {{ $row->apellidos }}
-                    </h3>
-
-                    <span class="student-label">
-                        Resultado de valoración del expediente
-                    </span>
-
+                <div>
+                    <h1>Resultados y valoración de salud</h1>
+                    <p>
+                        Consulta la clasificación, valoración institucional
+                        y nivel de prioridad de los expedientes.
+                    </p>
                 </div>
+            </div>
+        </div>
 
-                @if($row->atencion_prioritaria)
-
-                    <span class="priority-badge priority">
-                        ⚠ Atención prioritaria
-                    </span>
-
-                @else
-
-                    <span class="priority-badge normal">
-                        ✓ Sin prioridad marcada
-                    </span>
-
-                @endif
-
+        {{-- Información --}}
+        <div class="information-card">
+            <div class="information-title">
+                <span>ⓘ</span>
+                <span>Criterios de clasificación</span>
             </div>
 
-            <div class="assessment-body">
+            <p>
+                La clasificación se obtiene del expediente:
+                <strong>salud física</strong> (1, 3, 4, 5),
+                <strong>socioemocional</strong> (2, 9, 10 y apoyo psicológico en 11)
+                y <strong>psicopedagógica</strong> (6, 7 y apoyo de aprendizaje en 11).
+                El administrador o coordinador autorizado puede determinar la
+                clasificación y la prioridad.
+            </p>
+        </div>
 
-                <div class="classification-box">
+        {{-- Valoraciones --}}
+        <div class="section-heading">
+            <h2>Valoración actual</h2>
+            <span>Expedientes con clasificación disponible</span>
+        </div>
 
-                    <span class="classification-label">
-                        Clasificación registrada
-                    </span>
+        @forelse($assessments as $row)
 
-                    <div class="classification-value">
-                        {{ implode(', ', $categorias) }}
+            @php
+                $categorias = json_decode(
+                    $row->categoria_manual ?: $row->categoria_atencion,
+                    true
+                ) ?: [];
+            @endphp
+
+            <article class="assessment-card">
+
+                <div class="assessment-top">
+                    <div class="student-info">
+                        <h3>{{ $row->nombre }} {{ $row->apellidos }}</h3>
+                        <span class="student-label">
+                            Resultado de valoración del expediente
+                        </span>
                     </div>
 
+                    @if($row->atencion_prioritaria)
+                        <span class="priority-badge priority">
+                            ⚠ Atención prioritaria
+                        </span>
+                    @else
+                        <span class="priority-badge normal">
+                            ✓ Sin prioridad marcada
+                        </span>
+                    @endif
                 </div>
 
-                @if($row->categoria_manual)
+                <div class="assessment-body">
 
-                    <div class="institutional-note">
+                    <div class="classification-box">
+                        <span class="classification-label">
+                            Clasificación registrada
+                        </span>
 
-                        <span>⚠</span>
-
-                        <div>
-                            <strong>Valoración institucional</strong><br>
-
-                            Esta valoración fue realizada por
-                            <strong>{{ $row->valorado_por }}</strong>
-                            y prevalece sobre la clasificación automática.
+                        <div class="classification-value">
+                            {{ implode(', ', $categorias) }}
                         </div>
-
                     </div>
 
-                @endif
+                    @if($row->categoria_manual)
+                        <div class="institutional-note">
+                            <span>⚠</span>
 
-                @if(
-                    auth()->user()->rol_id !== 3 &&
-                    \App\Services\SectionAccess::can('clasificacion', true)
-                )
+                            <div>
+                                <strong>Valoración institucional</strong><br>
+                                Esta valoración fue realizada por
+                                <strong>{{ $row->valorado_por }}</strong>
+                                y prevalece sobre la clasificación automática.
+                            </div>
+                        </div>
+                    @endif
 
-                    <a
-                        href="{{ route('expediente.ver', $row->id) }}"
-                        class="assessment-action"
-                    >
-                        ✎ Valorar o modificar clasificación y riesgo
-                    </a>
-
-                @endif
-
-            </div>
-
-        </article>
-
-    @empty
-
-        <div class="empty-assessments">
-
-            <div class="empty-icon">
-                🩺
-            </div>
-
-            <strong>
-                No hay expedientes con clasificación disponible.
-            </strong>
-
-            <br>
-
-            <small>
-                Los expedientes que tengan una valoración registrada
-                aparecerán en esta sección.
-            </small>
-
-        </div>
-
-    @endforelse
-
-    {{-- Historial --}}
-    @if($results->isNotEmpty())
-
-        <div class="history-section">
-
-            <div class="history-card">
-
-                <div class="history-header">
-
-                    <h2>
-                        Puntajes históricos conservados
-                    </h2>
-
-                    <span class="history-badge">
-                        Historial
-                    </span>
+                    @if(
+                        auth()->user()->rol_id !== 3 &&
+                        \App\Services\SectionAccess::can('clasificacion', true)
+                    )
+                        <a
+                            href="{{ route('expediente.ver', $row->id) }}"
+                            class="assessment-action"
+                        >
+                            ✎ Valorar o modificar clasificación y riesgo
+                        </a>
+                    @endif
 
                 </div>
 
-                <div class="history-table-wrapper">
+            </article>
 
-                    <table class="history-table">
+        @empty
 
-                        <thead>
-                            <tr>
-                                <th>Alumno</th>
-                                <th>Nivel registrado</th>
-                                <th>Estado</th>
-                                <th>Fecha</th>
-                            </tr>
-                        </thead>
+            <div class="empty-assessments">
+                <div class="empty-icon">🩺</div>
 
-                        <tbody>
+                <strong>No hay expedientes con clasificación disponible.</strong>
+                <br>
+                <small>
+                    Los expedientes que tengan una valoración registrada
+                    aparecerán en esta sección.
+                </small>
+            </div>
 
-                            @foreach($results as $row)
+        @endforelse
 
+        {{-- Historial --}}
+        @if($results->isNotEmpty())
+
+            <div class="history-section">
+                <div class="history-card">
+
+                    <div class="history-header">
+                        <h2>Puntajes históricos conservados</h2>
+                        <span class="history-badge">Historial</span>
+                    </div>
+
+                    <div class="history-table-wrapper">
+                        <table class="history-table">
+
+                            <thead>
                                 <tr>
-
-                                    <td>
-                                        <strong>
-                                            {{ $row->nombre }}
-                                            {{ $row->apellidos }}
-                                        </strong>
-                                    </td>
-
-                                    <td>
-                                        <span class="level-value">
-                                            {{ $row->nivel_riesgo }}
-                                        </span>
-                                    </td>
-
-                                    <td>
-
-                                        @if($row->nivel_riesgo <= 3)
-
-                                            <span class="risk-status risk-stable">
-                                                ✓ Estable
-                                            </span>
-
-                                        @elseif($row->nivel_riesgo <= 6)
-
-                                            <span class="risk-status risk-followup">
-                                                ◷ Seguimiento
-                                            </span>
-
-                                        @else
-
-                                            <span class="risk-status risk-urgent">
-                                                ⚠ Urgente
-                                            </span>
-
-                                        @endif
-
-                                    </td>
-
-                                    <td>
-                                        <span class="date-value">
-                                            {{ $row->fecha }}
-                                        </span>
-                                    </td>
-
+                                    <th>Alumno</th>
+                                    <th>Nivel registrado</th>
+                                    <th>Estado</th>
+                                    <th>Fecha</th>
                                 </tr>
+                            </thead>
 
-                            @endforeach
+                            <tbody>
+                                @foreach($results as $row)
+                                    <tr>
+                                        <td>
+                                            <strong>
+                                                {{ $row->nombre }}
+                                                {{ $row->apellidos }}
+                                            </strong>
+                                        </td>
 
-                        </tbody>
+                                        <td>
+                                            <span class="level-value">
+                                                {{ $row->nivel_riesgo }}
+                                            </span>
+                                        </td>
 
-                    </table>
+                                        <td>
+                                            @if($row->nivel_riesgo <= 3)
+                                                <span class="risk-status risk-stable">
+                                                    ✓ Estable
+                                                </span>
+                                            @elseif($row->nivel_riesgo <= 6)
+                                                <span class="risk-status risk-followup">
+                                                    ◷ Seguimiento
+                                                </span>
+                                            @else
+                                                <span class="risk-status risk-urgent">
+                                                    ⚠ Urgente
+                                                </span>
+                                            @endif
+                                        </td>
+
+                                        <td>
+                                            <span class="date-value">
+                                                {{ $row->fecha }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+
+                        </table>
+                    </div>
 
                 </div>
-
             </div>
 
-        </div>
+        @endif
 
-    @endif
-
-</div>
-
-
+    </div>
 </div>
 
 @endsection

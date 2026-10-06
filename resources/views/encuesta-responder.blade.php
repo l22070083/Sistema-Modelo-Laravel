@@ -4,13 +4,6 @@
 
 @section('content')
 
-<h1>{{ $survey->titulo }}</h1><p>{{ $survey->descripcion }}</p>
-<p>Progreso: {{ $answered }} de {{ $questions->total() }} preguntas</p><p id="estado-guardado" role="status"></p>
-<form action="{{ route('encuesta.responder',['id'=>$survey->id,'page'=>$questions->currentPage()]) }}" method="post">@csrf
-@foreach($questions as $question)<fieldset class="card card-body mb-3"><legend class="h5">{{ $question->planteamiento }}</legend>@foreach(['Si','No'] as $answer)<label class="survey-option"><input type="radio" class="respuesta" name="respuestas[{{ $question->id }}]" value="{{ $answer }}" data-pregunta="{{ $question->id }}" @checked(($previous[$question->id]??null)===$answer) required> {{ $answer }}</label>@endforeach</fieldset>@endforeach
-<button class="btn btn-primary">{{ $questions->hasMorePages()?'Guardar y continuar':'Guardar y finalizar' }}</button></form><div class="mt-3">{{ $questions->links() }}</div>
-
-
 <style>
     :root {
         --survey-blue: #174a88;
@@ -304,135 +297,133 @@
 
 <div class="survey-answer-page">
 
+    {{-- Encabezado --}}
+    <div class="survey-answer-header">
+        <h1>{{ $survey->titulo }}</h1>
 
-{{-- Encabezado --}}
-<div class="survey-answer-header">
-    <h1>{{ $survey->titulo }}</h1>
-
-    @if($survey->descripcion)
-        <p>{{ $survey->descripcion }}</p>
-    @else
-        <p>Responde las siguientes preguntas de acuerdo con tu situación actual.</p>
-    @endif
-</div>
-
-{{-- Progreso --}}
-@php
-    $totalQuestions = $questions->total();
-    $progress = $totalQuestions > 0
-        ? round(($answered / $totalQuestions) * 100)
-        : 0;
-@endphp
-
-<div class="progress-card">
-    <div class="progress-top">
-        <span class="progress-label">
-            Progreso de la encuesta
-        </span>
-
-        <span class="progress-count">
-            {{ $answered }} de {{ $totalQuestions }} preguntas respondidas
-        </span>
+        @if($survey->descripcion)
+            <p>{{ $survey->descripcion }}</p>
+        @else
+            <p>Responde las siguientes preguntas de acuerdo con tu situación actual.</p>
+        @endif
     </div>
 
-    <div
-        class="progress"
-        role="progressbar"
-        aria-valuenow="{{ $progress }}"
-        aria-valuemin="0"
-        aria-valuemax="100"
-    >
-        <div
-            class="progress-bar"
-            style="width: {{ $progress }}%"
-        ></div>
-    </div>
-</div>
+    {{-- Progreso --}}
+    @php
+        $totalQuestions = $questions->total();
+        $progress = $totalQuestions > 0
+            ? round(($answered / $totalQuestions) * 100)
+            : 0;
+    @endphp
 
-{{-- Estado del guardado automático --}}
-<p
-    id="estado-guardado"
-    class="save-status"
-    role="status"
-    aria-live="polite"
-></p>
+    <div class="progress-card">
+        <div class="progress-top">
+            <span class="progress-label">
+                Progreso de la encuesta
+            </span>
 
-{{-- Formulario --}}
-<form
-    action="{{ route('encuesta.responder', ['id' => $survey->id, 'page' => $questions->currentPage()]) }}"
-    method="post"
->
-    @csrf
-
-    @foreach($questions as $index => $question)
-
-        <fieldset class="question-card">
-            <div class="question-content">
-
-                <legend class="question-title">
-                    <span class="question-number">
-                        {{ $questions->firstItem() + $index }}
-                    </span>
-
-                    <span>
-                        {{ $question->planteamiento }}
-                    </span>
-                </legend>
-
-                <div class="answer-options">
-
-                    @foreach(['Si', 'No'] as $answer)
-
-                        <label class="answer-option">
-
-                            <input
-                                type="radio"
-                                class="respuesta"
-                                name="respuestas[{{ $question->id }}]"
-                                value="{{ $answer }}"
-                                data-pregunta="{{ $question->id }}"
-                                @checked(($previous[$question->id] ?? null) === $answer)
-                                required
-                            >
-
-                            <span class="answer-box">
-                                <span class="answer-circle"></span>
-                                <span>{{ $answer }}</span>
-                            </span>
-
-                        </label>
-
-                    @endforeach
-
-                </div>
-
-            </div>
-        </fieldset>
-
-    @endforeach
-
-    {{-- Acciones --}}
-    <div class="submit-area">
-
-        <div class="submit-info">
-            Las respuestas se guardan automáticamente al seleccionarlas.
+            <span class="progress-count">
+                {{ $answered }} de {{ $totalQuestions }} preguntas respondidas
+            </span>
         </div>
 
-        <button class="btn btn-survey" type="submit">
-            {{ $questions->hasMorePages() ? 'Guardar y continuar' : 'Guardar y finalizar' }}
-        </button>
-
+        <div
+            class="progress"
+            role="progressbar"
+            aria-valuenow="{{ $progress }}"
+            aria-valuemin="0"
+            aria-valuemax="100"
+        >
+            <div
+                class="progress-bar"
+                style="width: {{ $progress }}%"
+            ></div>
+        </div>
     </div>
 
-</form>
+    {{-- Estado del guardado automático --}}
+    <p
+        id="estado-guardado"
+        class="save-status"
+        role="status"
+        aria-live="polite"
+    ></p>
 
-{{-- Paginación --}}
-@if($questions->hasPages())
-    <div class="pagination-container">
-        {{ $questions->links() }}
-    </div>
-@endif
+    {{-- Formulario --}}
+    <form
+        action="{{ route('encuesta.responder', ['id' => $survey->id, 'page' => $questions->currentPage()]) }}"
+        method="post"
+    >
+        @csrf
 
+        @foreach($questions as $index => $question)
+
+            <fieldset class="question-card">
+                <div class="question-content">
+
+                    <legend class="question-title">
+                        <span class="question-number">
+                            {{ $questions->firstItem() + $index }}
+                        </span>
+
+                        <span>
+                            {{ $question->planteamiento }}
+                        </span>
+                    </legend>
+
+                    <div class="answer-options">
+
+                        @foreach(['Si', 'No'] as $answer)
+
+                            <label class="answer-option">
+
+                                <input
+                                    type="radio"
+                                    class="respuesta"
+                                    name="respuestas[{{ $question->id }}]"
+                                    value="{{ $answer }}"
+                                    data-pregunta="{{ $question->id }}"
+                                    @checked(($previous[$question->id] ?? null) === $answer)
+                                    required
+                                >
+
+                                <span class="answer-box">
+                                    <span class="answer-circle"></span>
+                                    <span>{{ $answer }}</span>
+                                </span>
+
+                            </label>
+
+                        @endforeach
+
+                    </div>
+
+                </div>
+            </fieldset>
+
+        @endforeach
+
+        {{-- Acciones --}}
+        <div class="submit-area">
+
+            <div class="submit-info">
+                Las respuestas se guardan automáticamente al seleccionarlas.
+            </div>
+
+            <button class="btn btn-survey" type="submit">
+                {{ $questions->hasMorePages() ? 'Guardar y continuar' : 'Guardar y finalizar' }}
+            </button>
+
+        </div>
+
+    </form>
+
+    {{-- Paginación --}}
+    @if($questions->hasPages())
+        <div class="pagination-container">
+            {{ $questions->links() }}
+        </div>
+    @endif
 
 </div>
 

@@ -2,18 +2,6 @@
 
 @section('content')
 
-<h1>Coordinador: {{ $coordinador->nombre }}</h1>
-<form class="card card-body mb-3" action="{{ route('coordinador.save',$coordinador->id) }}" method="post">@csrf
-@foreach(['nombre','apellidos','username','email'] as $field)<label for="{{ $field }}">{{ ucfirst($field) }}</label><input id="{{ $field }}" name="{{ $field }}" value="{{ old($field,$coordinador->$field) }}" class="form-control mb-3" @if($field!=='apellidos') required @endif>@endforeach
-<label for="password">Nueva contraseña (opcional)</label><input id="password" name="password" type="password" class="form-control mb-3" autocomplete="new-password"><button class="btn btn-primary">Guardar datos</button></form>
-<form method="post" action="{{ route('coordinador.status',$coordinador->id) }}" class="mb-3" onsubmit="return confirm('¿Cambiar el estado del coordinador?')">@csrf<input type="hidden" name="status" value="{{ $coordinador->status===10?0:10 }}"><button class="btn btn-warning">{{ $coordinador->status===10?'Dar de baja':'Reactivar' }}</button></form>
-<form method="post" action="{{ route('coordinador.grupos',$coordinador->id) }}" class="card card-body mb-3">@csrf<h2 class="h5">Grupos asignados</h2>
-@foreach($grupos as $group)<label class="choice-label"><input name="grupos[]" type="checkbox" value="{{ $group->id }}" @checked($group->coordinador_id==$coordinador->id) @disabled($group->coordinador_id && $group->coordinador_id!=$coordinador->id)> {{ $group->nombre }}{{ $group->coordinador_id && $group->coordinador_id!=$coordinador->id?' (asignado a otro coordinador)':'' }}</label>@endforeach<button class="btn btn-primary mt-3">Guardar grupos</button></form>
-<form method="post" action="{{ route('coordinador.permisos',$coordinador->id) }}" class="card card-body">@csrf<h2 class="h5">Permisos por sección</h2>
-@foreach(config('dossier.sections') as $section=>$fields)<div class="permission-row"><strong>{{ config('dossier.section_labels.'.$section,ucfirst($section)) }}</strong> <label class="choice-label"><input name="permisos[{{ $section }}][ver]" type="checkbox" value="1" @checked($permisos[$section]->puede_ver??false)> Consultar</label> <label class="choice-label"><input name="permisos[{{ $section }}][editar]" type="checkbox" value="1" @checked($permisos[$section]->puede_editar??false)> Editar</label></div>@endforeach
-<label for="motivo">Motivo del cambio de permisos</label><textarea name="motivo" id="motivo" class="form-control my-3" maxlength="2000" required></textarea><button class="btn btn-primary">Guardar permisos</button></form>
-
-
 <style>
     :root {
         --coord-blue: #174a88;
@@ -447,434 +435,295 @@
 </style>
 
 <div class="coord-page">
+    <div class="coord-container">
 
-
-<div class="coord-container">
-
-    {{-- ENCABEZADO --}}
-    <header class="coord-header">
-
-        <div class="coord-header-content">
-
-            <div class="coord-avatar">
-                👨‍🏫
-            </div>
-
-            <div>
-
-                <h1>
-                    Coordinador: {{ $coordinador->nombre }}
-                </h1>
-
-                <p>
-                    Administración de datos, grupos y permisos
-                </p>
-
-            </div>
-
-        </div>
-
-    </header>
-
-
-    <div class="coord-grid">
-
-
-        {{-- DATOS DEL COORDINADOR --}}
-        <section class="coord-card">
-
-            <div class="coord-card-header">
-
-                <div class="coord-card-icon">
-                    👤
-                </div>
+        {{-- ENCABEZADO --}}
+        <header class="coord-header">
+            <div class="coord-header-content">
+                <div class="coord-avatar">👨‍🏫</div>
 
                 <div>
-
-                    <h2>
-                        Datos del coordinador
-                    </h2>
-
-                    <p>
-                        Información de acceso y contacto
-                    </p>
-
+                    <h1>Coordinador: {{ $coordinador->nombre }}</h1>
+                    <p>Administración de datos, grupos y permisos</p>
                 </div>
-
             </div>
+        </header>
 
+        <div class="coord-grid">
 
-            <div class="coord-card-body">
+            {{-- DATOS DEL COORDINADOR --}}
+            <section class="coord-card">
 
-                <form action="{{ route('coordinador.save', $coordinador->id) }}"
-                      method="post">
-
-                    @csrf
-
-                    @foreach(['nombre','apellidos','username','email'] as $field)
-
-                        <div class="mb-3">
-
-                            <label for="{{ $field }}"
-                                   class="coord-form-label">
-
-                                {{ ucfirst($field) }}
-
-                            </label>
-
-                            <input id="{{ $field }}"
-                                   name="{{ $field }}"
-                                   value="{{ old($field, $coordinador->$field) }}"
-                                   class="form-control"
-                                   @if($field != 'apellidos') required @endif>
-
-                        </div>
-
-                    @endforeach
-
-
-                    <div class="mb-3">
-
-                        <label for="password"
-                               class="coord-form-label">
-
-                            Nueva contraseña
-
-                            <span class="fw-normal text-muted">
-                                (opcional)
-                            </span>
-
-                        </label>
-
-                        <input id="password"
-                               name="password"
-                               type="password"
-                               class="form-control"
-                               autocomplete="new-password">
-
-                    </div>
-
-
-                    <button class="btn coord-btn-primary w-100">
-
-                        💾 Guardar datos
-
-                    </button>
-
-                </form>
-
-            </div>
-
-        </section>
-
-
-        {{-- ESTADO --}}
-        <section class="coord-card">
-
-            <div class="coord-card-header">
-
-                <div class="coord-card-icon">
-                    ⚡
-                </div>
-
-                <div>
-
-                    <h2>
-                        Estado de la cuenta
-                    </h2>
-
-                    <p>
-                        Control de acceso del coordinador
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <div class="coord-card-body">
-
-                <div class="coord-status">
+                <div class="coord-card-header">
+                    <div class="coord-card-icon">👤</div>
 
                     <div>
-
-                        <div class="coord-status-label">
-                            Estado actual
-                        </div>
-
-                        @if($coordinador->status === 10)
-
-                            <div class="coord-badge active">
-                                <span class="coord-dot"></span>
-                                Activo
-                            </div>
-
-                        @else
-
-                            <div class="coord-badge inactive">
-                                <span class="coord-dot"></span>
-                                Inactivo
-                            </div>
-
-                        @endif
-
+                        <h2>Datos del coordinador</h2>
+                        <p>Información de acceso y contacto</p>
                     </div>
+                </div>
 
+                <div class="coord-card-body">
 
-                    <form method="post"
-                          action="{{ route('coordinador.status', $coordinador->id) }}"
-                          onsubmit="return confirm('¿Cambiar el estado del coordinador?')">
+                    <form action="{{ route('coordinador.save', $coordinador->id) }}"
+                          method="post">
 
                         @csrf
 
-                        <input type="hidden"
-                               name="status"
-                               value="{{ $coordinador->status === 10 ? 0 : 10 }}">
+                        @foreach(['nombre','apellidos','username','email'] as $field)
 
-                        <button class="btn coord-btn-warning">
+                            <div class="mb-3">
+                                <label for="{{ $field }}" class="coord-form-label">
+                                    {{ ucfirst($field) }}
+                                </label>
 
-                            {{ $coordinador->status === 10
-                                ? 'Dar de baja'
-                                : 'Reactivar'
-                            }}
+                                <input id="{{ $field }}"
+                                       name="{{ $field }}"
+                                       value="{{ old($field, $coordinador->$field) }}"
+                                       class="form-control"
+                                       @if($field !== 'apellidos') required @endif>
+                            </div>
 
+                        @endforeach
+
+                        <div class="mb-3">
+                            <label for="password" class="coord-form-label">
+                                Nueva contraseña
+                                <span class="fw-normal text-muted">(opcional)</span>
+                            </label>
+
+                            <input id="password"
+                                   name="password"
+                                   type="password"
+                                   class="form-control"
+                                   autocomplete="new-password">
+                        </div>
+
+                        <button class="btn coord-btn-primary w-100">
+                            💾 Guardar datos
                         </button>
 
                     </form>
 
                 </div>
 
-                <div class="mt-3 text-muted small">
+            </section>
 
-                    Cambiar el estado puede afectar el acceso del
-                    coordinador al sistema.
+            {{-- ESTADO --}}
+            <section class="coord-card">
+
+                <div class="coord-card-header">
+                    <div class="coord-card-icon">⚡</div>
+
+                    <div>
+                        <h2>Estado de la cuenta</h2>
+                        <p>Control de acceso del coordinador</p>
+                    </div>
+                </div>
+
+                <div class="coord-card-body">
+
+                    <div class="coord-status">
+
+                        <div>
+                            <div class="coord-status-label">Estado actual</div>
+
+                            @if($coordinador->status === 10)
+                                <div class="coord-badge active">
+                                    <span class="coord-dot"></span>
+                                    Activo
+                                </div>
+                            @else
+                                <div class="coord-badge inactive">
+                                    <span class="coord-dot"></span>
+                                    Inactivo
+                                </div>
+                            @endif
+                        </div>
+
+                        <form method="post"
+                              action="{{ route('coordinador.status', $coordinador->id) }}"
+                              onsubmit="return confirm('¿Cambiar el estado del coordinador?')">
+
+                            @csrf
+
+                            <input type="hidden"
+                                   name="status"
+                                   value="{{ $coordinador->status === 10 ? 0 : 10 }}">
+
+                            <button class="btn coord-btn-warning">
+                                {{ $coordinador->status === 10 ? 'Dar de baja' : 'Reactivar' }}
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                    <div class="mt-3 text-muted small">
+                        Cambiar el estado puede afectar el acceso del
+                        coordinador al sistema.
+                    </div>
 
                 </div>
 
-            </div>
+            </section>
 
-        </section>
+            {{-- GRUPOS --}}
+            <section class="coord-card full">
 
+                <div class="coord-card-header">
+                    <div class="coord-card-icon">👥</div>
 
-        {{-- GRUPOS --}}
-        <section class="coord-card full">
-
-            <div class="coord-card-header">
-
-                <div class="coord-card-icon">
-                    👥
+                    <div>
+                        <h2>Grupos asignados</h2>
+                        <p>
+                            Selecciona los grupos que estarán bajo responsabilidad
+                            de este coordinador.
+                        </p>
+                    </div>
                 </div>
 
-                <div>
+                <div class="coord-card-body">
 
-                    <h2>
-                        Grupos asignados
-                    </h2>
+                    <form method="post"
+                          action="{{ route('coordinador.grupos', $coordinador->id) }}">
 
-                    <p>
-                        Selecciona los grupos que estarán bajo responsabilidad
-                        de este coordinador.
-                    </p>
+                        @csrf
 
-                </div>
+                        <div class="groups-list">
 
-            </div>
+                            @foreach($grupos as $group)
 
+                                <label class="group-option">
 
-            <div class="coord-card-body">
+                                    <input name="grupos[]"
+                                           type="checkbox"
+                                           value="{{ $group->id }}"
+                                           @checked($group->coordinador_id == $coordinador->id)
+                                           @disabled(
+                                                $group->coordinador_id &&
+                                                $group->coordinador_id != $coordinador->id
+                                           )>
 
-                <form method="post"
-                      action="{{ route('coordinador.grupos', $coordinador->id) }}">
+                                    <span>
+                                        <span class="group-name">{{ $group->nombre }}</span>
 
-                    @csrf
-
-                    <div class="groups-list">
-
-                        @foreach($grupos as $group)
-
-                            <label class="group-option">
-
-                                <input name="grupos[]"
-                                       type="checkbox"
-                                       value="{{ $group->id }}"
-                                       @checked($group->coordinador_id == $coordinador->id)
-                                       @disabled(
+                                        @if(
                                             $group->coordinador_id &&
                                             $group->coordinador_id != $coordinador->id
-                                       )>
-
-                                <span>
-
-                                    <span class="group-name">
-                                        {{ $group->nombre }}
+                                        )
+                                            <span class="group-warning">
+                                                ⚠ Asignado a otro coordinador
+                                            </span>
+                                        @endif
                                     </span>
 
-                                    @if(
-                                        $group->coordinador_id &&
-                                        $group->coordinador_id != $coordinador->id
-                                    )
+                                </label>
 
-                                        <span class="group-warning">
-                                            ⚠ Asignado a otro coordinador
-                                        </span>
+                            @endforeach
 
-                                    @endif
+                        </div>
 
-                                </span>
+                        <button class="btn coord-btn-primary mt-3">
+                            💾 Guardar grupos
+                        </button>
 
-                            </label>
-
-                        @endforeach
-
-                    </div>
-
-
-                    <button class="btn coord-btn-primary mt-3">
-
-                        💾 Guardar grupos
-
-                    </button>
-
-                </form>
-
-            </div>
-
-        </section>
-
-
-        {{-- PERMISOS --}}
-        <section class="coord-card full">
-
-            <div class="coord-card-header">
-
-                <div class="coord-card-icon">
-                    🔐
-                </div>
-
-                <div>
-
-                    <h2>
-                        Permisos por sección
-                    </h2>
-
-                    <p>
-                        Define qué información puede consultar o modificar
-                        el coordinador.
-                    </p>
+                    </form>
 
                 </div>
 
-            </div>
+            </section>
 
+            {{-- PERMISOS --}}
+            <section class="coord-card full">
 
-            <div class="coord-card-body">
+                <div class="coord-card-header">
+                    <div class="coord-card-icon">🔐</div>
 
-                <form method="post"
-                      action="{{ route('coordinador.permisos', $coordinador->id) }}">
-
-                    @csrf
-
-
-                    <div class="permission-header">
-
-                        <div>
-                            Sección
-                        </div>
-
-                        <div>
-                            Consultar
-                        </div>
-
-                        <div>
-                            Editar
-                        </div>
-
+                    <div>
+                        <h2>Permisos por sección</h2>
+                        <p>
+                            Define qué información puede consultar o modificar
+                            el coordinador.
+                        </p>
                     </div>
+                </div>
 
+                <div class="coord-card-body">
 
-                    <div class="permissions-list">
+                    <form method="post"
+                          action="{{ route('coordinador.permisos', $coordinador->id) }}">
 
-                        @foreach(config('dossier.sections') as $section => $fields)
+                        @csrf
 
-                            <div class="permission-row">
+                        <div class="permission-header">
+                            <div>Sección</div>
+                            <div>Consultar</div>
+                            <div>Editar</div>
+                        </div>
 
-                                <div class="permission-section">
+                        <div class="permissions-list">
 
-                                    {{ ucfirst(str_replace('_', ' ', $section)) }}
+                            @foreach(config('dossier.sections') as $section => $fields)
+
+                                <div class="permission-row">
+
+                                    <div class="permission-section">
+                                        {{ config('dossier.section_labels.'.$section, ucfirst($section)) }}
+                                    </div>
+
+                                    <label class="permission-check">
+                                        <input name="permisos[{{ $section }}][ver]"
+                                               type="checkbox"
+                                               value="1"
+                                               @checked($permisos[$section]->puede_ver ?? false)>
+                                        Puede consultar
+                                    </label>
+
+                                    <label class="permission-check">
+                                        <input name="permisos[{{ $section }}][editar]"
+                                               type="checkbox"
+                                               value="1"
+                                               @checked($permisos[$section]->puede_editar ?? false)>
+                                        Puede editar
+                                    </label>
 
                                 </div>
 
+                            @endforeach
 
-                                <label class="permission-check">
+                        </div>
 
-                                    <input name="permisos[{{ $section }}][ver]"
-                                           type="checkbox"
-                                           value="1"
-                                           @checked($permisos[$section]->puede_ver ?? false)>
+                        <div class="motivo-box">
+                            <label for="motivo" class="coord-form-label">
+                                Motivo del cambio de permisos
+                            </label>
 
-                                    Puede consultar
+                            <textarea name="motivo"
+                                      id="motivo"
+                                      class="form-control"
+                                      maxlength="2000"
+                                      required
+                                      placeholder="Describe el motivo por el cual se modifican los permisos..."></textarea>
+                        </div>
 
-                                </label>
+                        <button class="btn coord-btn-primary mt-3">
+                            🔐 Guardar permisos
+                        </button>
 
+                    </form>
 
-                                <label class="permission-check">
+                </div>
 
-                                    <input name="permisos[{{ $section }}][editar]"
-                                           type="checkbox"
-                                           value="1"
-                                           @checked($permisos[$section]->puede_editar ?? false)>
+            </section>
 
-                                    Puede editar
+        </div>
 
-                                </label>
-
-                            </div>
-
-                        @endforeach
-
-                    </div>
-
-
-                    <div class="motivo-box">
-
-                        <label for="motivo"
-                               class="coord-form-label">
-
-                            Motivo del cambio de permisos
-
-                        </label>
-
-                        <textarea name="motivo"
-                                  id="motivo"
-                                  class="form-control"
-                                  maxlength="2000"
-                                  required
-                                  placeholder="Describe el motivo por el cual se modifican los permisos..."></textarea>
-
-                    </div>
-
-
-                    <button class="btn coord-btn-primary mt-3">
-
-                        🔐 Guardar permisos
-
-                    </button>
-
-                </form>
-
-            </div>
-
-        </section>
+        <div class="coord-footer">
+            Sistema de Tutorías Académicas · Administración de coordinadores
+        </div>
 
     </div>
-
-
-    <div class="coord-footer">
-        Sistema de Tutorías Académicas · Administración de coordinadores
-    </div>
-
-</div>
-
 </div>
 
 @endsection
