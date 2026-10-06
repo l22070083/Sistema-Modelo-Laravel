@@ -3,10 +3,6 @@
 @section('title', 'Expedientes de Alumnos')
 
 @section('content')
-s
-<h1>Expedientes de alumnos</h1><form method="get" class="row g-2 mb-3"><div class="col-md-4"><label for="q">Alumno</label><input id="q" class="form-control" name="q" value="{{ request('q') }}"></div><div class="col-md-4"><label for="licenciatura">Licenciatura</label><select id="licenciatura" class="form-select" name="licenciatura_id"><option value="">Todas</option>@foreach($licenciaturas as $l)<option value="{{ $l->id }}" @selected(request('licenciatura_id')==$l->id)>{{ $l->nombre }}</option>@endforeach</select></div><div class="col-md-4 filter-actions"><label class="choice-label"><input name="archivados" type="checkbox" value="1" @checked(request('archivados'))> Incluir archivados</label><button class="btn btn-primary">Filtrar</button></div></form>
-<x-table-scroll label="Listado de expedientes"><table class="table"><thead><tr><th>Alumno</th><th>Licenciatura</th><th>Estado</th><th>Acción</th></tr></thead><tbody>@forelse($rows as $row)<tr><td>{{ $row->nombres }} {{ $row->apellidos }}</td><td>{{ $row->licenciatura }}</td><td>{{ $row->archivado_at?'Archivado':'Activo' }}</td><td><a href="{{ route('expediente.ver',$row->id) }}">Ver expediente</a></td></tr>@empty<tr><td colspan="4">No hay expedientes disponibles.</td></tr>@endforelse</tbody></table></x-table-scroll>{{ $rows->links() }}
-
 
 <style>
     :root {
@@ -358,247 +354,244 @@ s
 
 <div class="records-page">
 
+    <div class="records-container">
 
-<div class="records-container">
+        {{-- Encabezado --}}
+        <div class="records-header">
+            <div class="records-header-content">
 
-    {{-- Encabezado --}}
-    <div class="records-header">
-        <div class="records-header-content">
-
-            <div class="records-icon">
-                📁
-            </div>
-
-            <div>
-                <h1>Expedientes de alumnos</h1>
-
-                <p>
-                    Consulta, filtra y revisa los expedientes académicos
-                    y de seguimiento de los alumnos registrados.
-                </p>
-            </div>
-
-        </div>
-    </div>
-
-    {{-- Filtros --}}
-    <div class="filter-card">
-
-        <div class="filter-title">
-            <span class="filter-title-icon">🔎</span>
-            <span>Buscar y filtrar expedientes</span>
-        </div>
-
-        <form method="get">
-
-            <div class="row g-3">
-
-                <div class="col-md-4">
-
-                    <label for="q" class="form-label">
-                        Alumno
-                    </label>
-
-                    <input
-                        id="q"
-                        class="form-control"
-                        name="q"
-                        value="{{ request('q') }}"
-                        placeholder="Nombre o apellido"
-                    >
-
+                <div class="records-icon">
+                    📁
                 </div>
 
-                <div class="col-md-4">
+                <div>
+                    <h1>Expedientes de alumnos</h1>
 
-                    <label for="licenciatura" class="form-label">
-                        Licenciatura
-                    </label>
-
-                    <select
-                        id="licenciatura"
-                        class="form-select"
-                        name="licenciatura_id"
-                    >
-
-                        <option value="">
-                            Todas las licenciaturas
-                        </option>
-
-                        @foreach($licenciaturas as $l)
-
-                            <option
-                                value="{{ $l->id }}"
-                                @selected(request('licenciatura_id') == $l->id)
-                            >
-                                {{ $l->nombre }}
-                            </option>
-
-                        @endforeach
-
-                    </select>
-
+                    <p>
+                        Consulta, filtra y revisa los expedientes académicos
+                        y de seguimiento de los alumnos registrados.
+                    </p>
                 </div>
 
-                <div class="col-md-4">
+            </div>
+        </div>
 
-                    <label class="form-label">
-                        Opciones
-                    </label>
+        {{-- Filtros --}}
+        <div class="filter-card">
 
-                    <label class="archive-option">
+            <div class="filter-title">
+                <span class="filter-title-icon">🔎</span>
+                <span>Buscar y filtrar expedientes</span>
+            </div>
+
+            <form method="get">
+
+                <div class="row g-3">
+
+                    <div class="col-md-4">
+
+                        <label for="q" class="form-label">
+                            Alumno
+                        </label>
+
                         <input
-                            name="archivados"
-                            type="checkbox"
-                            value="1"
-                            @checked(request('archivados'))
+                            id="q"
+                            class="form-control"
+                            name="q"
+                            value="{{ request('q') }}"
+                            placeholder="Nombre o apellido"
                         >
 
-                        <span>Incluir expedientes archivados</span>
-                    </label>
+                    </div>
 
-                    <button
-                        type="submit"
-                        class="filter-button"
-                    >
-                        🔎 Filtrar resultados
-                    </button>
+                    <div class="col-md-4">
+
+                        <label for="licenciatura" class="form-label">
+                            Licenciatura
+                        </label>
+
+                        <select
+                            id="licenciatura"
+                            class="form-select"
+                            name="licenciatura_id"
+                        >
+
+                            <option value="">
+                                Todas las licenciaturas
+                            </option>
+
+                            @foreach($licenciaturas as $l)
+
+                                <option
+                                    value="{{ $l->id }}"
+                                    @selected(request('licenciatura_id') == $l->id)
+                                >
+                                    {{ $l->nombre }}
+                                </option>
+
+                            @endforeach
+
+                        </select>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <label class="form-label">
+                            Opciones
+                        </label>
+
+                        <label class="archive-option">
+                            <input
+                                name="archivados"
+                                type="checkbox"
+                                value="1"
+                                @checked(request('archivados'))
+                            >
+
+                            <span>Incluir expedientes archivados</span>
+                        </label>
+
+                        <button
+                            type="submit"
+                            class="filter-button"
+                        >
+                            🔎 Filtrar resultados
+                        </button>
+
+                    </div>
 
                 </div>
 
-            </div>
-
-        </form>
-
-    </div>
-
-    {{-- Expedientes --}}
-    <div class="records-card">
-
-        <div class="records-card-header">
-
-            <h2>
-                Expedientes registrados
-            </h2>
-
-            <span class="records-count">
-                {{ $rows->total() }} registros
-            </span>
+            </form>
 
         </div>
 
-        <div class="records-table-wrapper">
+        {{-- Expedientes --}}
+        <div class="records-card">
 
-            <table class="records-table">
+            <div class="records-card-header">
 
-                <thead>
-                    <tr>
-                        <th>Alumno</th>
-                        <th>Licenciatura</th>
-                        <th>Estado</th>
-                        <th>Acción</th>
-                    </tr>
-                </thead>
+                <h2>
+                    Expedientes registrados
+                </h2>
 
-                <tbody>
+                <span class="records-count">
+                    {{ $rows->total() }} registros
+                </span>
 
-                    @forelse($rows as $row)
-
-                        <tr>
-
-                            <td>
-                                <div class="student-name">
-                                    {{ $row->nombres }}
-                                    {{ $row->apellidos }}
-                                </div>
-                            </td>
-
-                            <td>
-                                <span class="career-name">
-                                    {{ $row->licenciatura }}
-                                </span>
-                            </td>
-
-                            <td>
-
-                                @if($row->archivado_at)
-
-                                    <span class="status-badge status-archived">
-                                        ▣ Archivado
-                                    </span>
-
-                                @else
-
-                                    <span class="status-badge status-active">
-                                        ✓ Activo
-                                    </span>
-
-                                @endif
-
-                            </td>
-
-                            <td>
-
-                                <a
-                                    href="{{ route('expediente.ver', $row->id) }}"
-                                    class="view-button"
-                                >
-                                    <span>👁</span>
-                                    Ver expediente
-                                </a>
-
-                            </td>
-
-                        </tr>
-
-                    @empty
-
-                        <tr>
-
-                            <td colspan="4" class="empty-state">
-
-                                <div class="empty-icon">
-                                    📁
-                                </div>
-
-                                <strong>
-                                    No hay expedientes disponibles.
-                                </strong>
-
-                                <br>
-
-                                <small>
-                                    Intenta cambiar los filtros de búsqueda
-                                    o registra un nuevo expediente.
-                                </small>
-
-                            </td>
-
-                        </tr>
-
-                    @endforelse
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-        {{-- Paginación --}}
-        @if($rows->hasPages())
-
-            <div class="records-pagination">
-                {{ $rows->links() }}
             </div>
 
-        @endif
+            <div class="records-table-wrapper">
+
+                <table class="records-table">
+
+                    <thead>
+                        <tr>
+                            <th>Alumno</th>
+                            <th>Licenciatura</th>
+                            <th>Estado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @forelse($rows as $row)
+
+                            <tr>
+
+                                <td>
+                                    <div class="student-name">
+                                        {{ $row->nombres }}
+                                        {{ $row->apellidos }}
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span class="career-name">
+                                        {{ $row->licenciatura }}
+                                    </span>
+                                </td>
+
+                                <td>
+
+                                    @if($row->archivado_at)
+
+                                        <span class="status-badge status-archived">
+                                            ▣ Archivado
+                                        </span>
+
+                                    @else
+
+                                        <span class="status-badge status-active">
+                                            ✓ Activo
+                                        </span>
+
+                                    @endif
+
+                                </td>
+
+                                <td>
+
+                                    <a
+                                        href="{{ route('expediente.ver', $row->id) }}"
+                                        class="view-button"
+                                    >
+                                        <span>👁</span>
+                                        Ver expediente
+                                    </a>
+
+                                </td>
+
+                            </tr>
+
+                        @empty
+
+                            <tr>
+
+                                <td colspan="4" class="empty-state">
+
+                                    <div class="empty-icon">
+                                        📁
+                                    </div>
+
+                                    <strong>
+                                        No hay expedientes disponibles.
+                                    </strong>
+
+                                    <br>
+
+                                    <small>
+                                        Intenta cambiar los filtros de búsqueda
+                                        o registra un nuevo expediente.
+                                    </small>
+
+                                </td>
+
+                            </tr>
+
+                        @endforelse
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            {{-- Paginación --}}
+            @if($rows->hasPages())
+
+                <div class="records-pagination">
+                    {{ $rows->links() }}
+                </div>
+
+            @endif
+
+        </div>
 
     </div>
 
 </div>
-
-
-</div>
-
 
 @endsection
