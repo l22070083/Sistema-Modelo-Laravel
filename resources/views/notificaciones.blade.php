@@ -4,27 +4,6 @@
 
 @section('content')
 
-<h1>Notificaciones</h1>
-<div class="card"><div class="card-body">
-<h2 class="h5">Solicitudes de alta de alumnos ({{ $alumnos->total() }})</h2>
-<p>Puedes dar de alta a un alumno, varios seleccionados o todos los pendientes de todas las páginas.</p>
-<form id="seleccionados" action="{{ route('notificaciones.alta') }}" method="post">@csrf<input type="hidden" name="modo" value="seleccionados"></form>
-<x-table-scroll label="Solicitudes de alta"><table class="table"><thead><tr><th><label><input type="checkbox" id="marcar-pagina"> Seleccionar página</label></th><th>Alumno</th><th>Correo</th><th>Matrícula</th><th>Acción</th></tr></thead><tbody>
-@forelse($alumnos as $alumno)
-<tr>
-<td><input form="seleccionados" type="checkbox" class="seleccion-alumno" name="seleccion[]" value="{{ $alumno->id }}" aria-label="Seleccionar a {{ $alumno->nombre }}"></td>
-<td>{{ $alumno->nombre }} {{ $alumno->apellidos }}</td><td>{{ $alumno->email }}</td><td>{{ $alumno->matricula }}</td>
-<td><form action="{{ route('notificaciones.alta') }}" method="post" onsubmit="return confirm('¿Dar de alta a este alumno y avisarle por correo?')">@csrf<input type="hidden" name="modo" value="individual"><input type="hidden" name="seleccion[]" value="{{ $alumno->id }}"><button class="btn btn-success btn-sm">Dar de alta</button></form></td>
-</tr>
-@empty<tr><td colspan="5">No hay solicitudes de alta pendientes.</td></tr>@endforelse
-</tbody></table></x-table-scroll>
-{{ $alumnos->links() }}
-<div class="approval-actions"><button form="seleccionados" class="btn btn-primary" @disabled(!$alumnos->total()) onclick="return confirm('¿Dar de alta a los seleccionados?')">Dar de alta a los seleccionados</button>
-<form action="{{ route('notificaciones.alta') }}" method="post" onsubmit="return confirm('¿Dar de alta a TODOS los pendientes, incluyendo todas las páginas?')">@csrf<input type="hidden" name="modo" value="todos"><button class="btn btn-success" @disabled(!$alumnos->total())>Dar de alta a todos ({{ $alumnos->total() }})</button></form></div>
-</div></div>
-<script>document.getElementById('marcar-pagina').addEventListener('change', function () { document.querySelectorAll('.seleccion-alumno').forEach(input => input.checked = this.checked); });</script>
-
-
 <style>
     :root {
         --notif-blue: #174a88;
@@ -416,304 +395,243 @@
 </style>
 
 <div class="notifications-page">
+    <div class="notifications-container">
 
+        {{-- Encabezado --}}
+        <div class="notifications-header">
+            <div class="notifications-header-content">
 
-<div class="notifications-container">
+                <div class="notifications-icon">🔔</div>
 
-    {{-- Encabezado --}}
-    <div class="notifications-header">
+                <div>
+                    <h1>Notificaciones</h1>
 
-        <div class="notifications-header-content">
-
-            <div class="notifications-icon">
-                🔔
-            </div>
-
-            <div>
-                <h1>Notificaciones</h1>
-
-                <p>
-                    Gestiona las solicitudes de alta de alumnos
-                    pendientes de aprobación.
-                </p>
-            </div>
-
-        </div>
-
-    </div>
-
-    {{-- Solicitudes --}}
-    <div class="requests-card">
-
-        <div class="requests-header">
-
-            <div class="requests-title">
-
-                <div class="requests-title-icon">
-                    👨‍🎓
+                    <p>
+                        Gestiona las solicitudes de alta de alumnos
+                        pendientes de aprobación.
+                    </p>
                 </div>
 
-                <h2>
-                    Solicitudes de alta de alumnos
-                </h2>
-
             </div>
-
-            <span class="requests-count">
-                {{ $alumnos->total() }} pendientes
-            </span>
-
         </div>
 
-        <div class="requests-body">
+        {{-- Solicitudes --}}
+        <div class="requests-card">
 
-            <p class="requests-description">
-                Puedes dar de alta a un alumno individualmente,
-                seleccionar varios alumnos de la página actual
-                o aprobar todos los pendientes de todas las páginas.
-            </p>
+            <div class="requests-header">
 
-            <div class="selection-info">
+                <div class="requests-title">
+                    <div class="requests-title-icon">👨‍🎓</div>
 
-                <span>ⓘ</span>
+                    <h2>Solicitudes de alta de alumnos</h2>
+                </div>
 
-                <span>
-                    Utiliza <strong>“Seleccionar página”</strong>
-                    para marcar rápidamente los alumnos visibles.
-                    Las acciones masivas se ejecutarán según la opción elegida.
+                <span class="requests-count">
+                    {{ $alumnos->total() }} pendientes
                 </span>
 
             </div>
 
-            {{-- Formulario para seleccionados --}}
-            <form
-                id="seleccionados"
-                action="{{ route('notificaciones.alta') }}"
-                method="post"
-            >
-                @csrf
+            <div class="requests-body">
 
-                <input
-                    type="hidden"
-                    name="modo"
-                    value="seleccionados"
+                <p class="requests-description">
+                    Puedes dar de alta a un alumno individualmente,
+                    seleccionar varios alumnos de la página actual
+                    o aprobar todos los pendientes de todas las páginas.
+                </p>
+
+                <div class="selection-info">
+                    <span>ⓘ</span>
+
+                    <span>
+                        Utiliza <strong>“Seleccionar página”</strong>
+                        para marcar rápidamente los alumnos visibles.
+                        Las acciones masivas se ejecutarán según la opción elegida.
+                    </span>
+                </div>
+
+                {{-- Formulario para seleccionados --}}
+                <form
+                    id="seleccionados"
+                    action="{{ route('notificaciones.alta') }}"
+                    method="post"
                 >
-            </form>
+                    @csrf
 
-            <div class="table-wrapper">
+                    <input type="hidden" name="modo" value="seleccionados">
+                </form>
 
-                <table class="notifications-table">
+                <div class="table-wrapper">
 
-                    <thead>
+                    <table class="notifications-table">
 
-                        <tr>
-
-                            <th>
-
-                                <label
-                                    for="marcar-pagina"
-                                    class="page-checkbox"
-                                >
-                                    <input
-                                        type="checkbox"
-                                        id="marcar-pagina"
-                                        class="selection-checkbox"
-                                    >
-
-                                    <span>
-                                        Seleccionar página
-                                    </span>
-                                </label>
-
-                            </th>
-
-                            <th>Alumno</th>
-                            <th>Correo</th>
-                            <th>Matrícula</th>
-                            <th>Acción</th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        @forelse($alumnos as $alumno)
-
+                        <thead>
                             <tr>
-
-                                <td>
-
-                                    <input
-                                        form="seleccionados"
-                                        type="checkbox"
-                                        class="seleccion-alumno selection-checkbox"
-                                        name="seleccion[]"
-                                        value="{{ $alumno->id }}"
-                                        aria-label="Seleccionar a {{ $alumno->nombre }}"
-                                    >
-
-                                </td>
-
-                                <td>
-                                    <div class="student-name">
-                                        {{ $alumno->nombre }}
-                                        {{ $alumno->apellidos }}
-                                    </div>
-                                </td>
-
-                                <td>
-                                    <span class="student-email">
-                                        {{ $alumno->email }}
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <span class="student-matricula">
-                                        {{ $alumno->matricula }}
-                                    </span>
-                                </td>
-
-                                <td>
-
-                                    <form
-                                        action="{{ route('notificaciones.alta') }}"
-                                        method="post"
-                                        onsubmit="return confirm('¿Dar de alta a este alumno y avisarle por correo?')"
-                                    >
-
-                                        @csrf
-
+                                <th>
+                                    <label for="marcar-pagina" class="page-checkbox">
                                         <input
-                                            type="hidden"
-                                            name="modo"
-                                            value="individual"
+                                            type="checkbox"
+                                            id="marcar-pagina"
+                                            class="selection-checkbox"
                                         >
 
+                                        <span>Seleccionar página</span>
+                                    </label>
+                                </th>
+
+                                <th>Alumno</th>
+                                <th>Correo</th>
+                                <th>Matrícula</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            @forelse($alumnos as $alumno)
+
+                                <tr>
+
+                                    <td>
                                         <input
-                                            type="hidden"
+                                            form="seleccionados"
+                                            type="checkbox"
+                                            class="seleccion-alumno selection-checkbox"
                                             name="seleccion[]"
                                             value="{{ $alumno->id }}"
+                                            aria-label="Seleccionar a {{ $alumno->nombre }}"
                                         >
+                                    </td>
 
-                                        <button
-                                            type="submit"
-                                            class="individual-button"
+                                    <td>
+                                        <div class="student-name">
+                                            {{ $alumno->nombre }}
+                                            {{ $alumno->apellidos }}
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <span class="student-email">
+                                            {{ $alumno->email }}
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <span class="student-matricula">
+                                            {{ $alumno->matricula }}
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <form
+                                            action="{{ route('notificaciones.alta') }}"
+                                            method="post"
+                                            onsubmit="return confirm('¿Dar de alta a este alumno y avisarle por correo?')"
                                         >
-                                            ✓ Dar de alta
-                                        </button>
+                                            @csrf
 
-                                    </form>
+                                            <input type="hidden" name="modo" value="individual">
 
-                                </td>
+                                            <input
+                                                type="hidden"
+                                                name="seleccion[]"
+                                                value="{{ $alumno->id }}"
+                                            >
 
-                            </tr>
+                                            <button type="submit" class="individual-button">
+                                                ✓ Dar de alta
+                                            </button>
+                                        </form>
+                                    </td>
 
-                        @empty
+                                </tr>
 
-                            <tr>
+                            @empty
 
-                                <td
-                                    colspan="5"
-                                    class="empty-state"
-                                >
+                                <tr>
+                                    <td colspan="5" class="empty-state">
 
-                                    <div class="empty-icon">
-                                        🔔
-                                    </div>
+                                        <div class="empty-icon">🔔</div>
 
-                                    <strong>
-                                        No hay solicitudes de alta pendientes.
-                                    </strong>
+                                        <strong>
+                                            No hay solicitudes de alta pendientes.
+                                        </strong>
 
-                                    <br>
+                                        <br>
 
-                                    <small>
-                                        Cuando un alumno solicite su registro,
-                                        aparecerá aquí para su aprobación.
-                                    </small>
+                                        <small>
+                                            Cuando un alumno solicite su registro,
+                                            aparecerá aquí para su aprobación.
+                                        </small>
 
-                                </td>
+                                    </td>
+                                </tr>
 
-                            </tr>
+                            @endforelse
 
-                        @endforelse
+                        </tbody>
 
-                    </tbody>
+                    </table>
 
-                </table>
-
-            </div>
-
-            {{-- Paginación --}}
-            @if($alumnos->hasPages())
-
-                <div class="pagination-container">
-                    {{ $alumnos->links() }}
                 </div>
 
-            @endif
+                {{-- Paginación --}}
+                @if($alumnos->hasPages())
+                    <div class="pagination-container">
+                        {{ $alumnos->links() }}
+                    </div>
+                @endif
 
-            {{-- Acciones masivas --}}
-            <div class="actions-panel">
+                {{-- Acciones masivas --}}
+                <div class="actions-panel">
 
-                <div class="actions-title">
-                    Acciones masivas
-                </div>
+                    <div class="actions-title">Acciones masivas</div>
 
-                <div class="actions-grid">
-
-                    <button
-                        form="seleccionados"
-                        type="submit"
-                        class="bulk-button primary"
-                        @disabled(!$alumnos->total())
-                        onclick="return confirm('¿Dar de alta a los seleccionados?')"
-                    >
-                        ✓ Dar de alta a los seleccionados
-                    </button>
-
-                    <form
-                        action="{{ route('notificaciones.alta') }}"
-                        method="post"
-                        onsubmit="return confirm('¿Dar de alta a TODOS los pendientes, incluyendo todas las páginas?')"
-                    >
-
-                        @csrf
-
-                        <input
-                            type="hidden"
-                            name="modo"
-                            value="todos"
-                        >
+                    <div class="actions-grid">
 
                         <button
+                            form="seleccionados"
                             type="submit"
-                            class="bulk-button success"
+                            class="bulk-button primary"
                             @disabled(!$alumnos->total())
+                            onclick="return confirm('¿Dar de alta a los seleccionados?')"
                         >
-                            ✓ Dar de alta a todos
-                            ({{ $alumnos->total() }})
+                            ✓ Dar de alta a los seleccionados
                         </button>
 
-                    </form>
+                        <form
+                            action="{{ route('notificaciones.alta') }}"
+                            method="post"
+                            onsubmit="return confirm('¿Dar de alta a TODOS los pendientes, incluyendo todas las páginas?')"
+                        >
+                            @csrf
+
+                            <input type="hidden" name="modo" value="todos">
+
+                            <button
+                                type="submit"
+                                class="bulk-button success"
+                                @disabled(!$alumnos->total())
+                            >
+                                ✓ Dar de alta a todos
+                                ({{ $alumnos->total() }})
+                            </button>
+                        </form>
+
+                    </div>
+
+                    <small class="all-note">
+                        La opción “Dar de alta a todos” incluye las solicitudes
+                        pendientes que se encuentren en todas las páginas.
+                    </small>
 
                 </div>
-
-                <small class="all-note">
-                    La opción “Dar de alta a todos” incluye las solicitudes
-                    pendientes que se encuentren en todas las páginas.
-                </small>
 
             </div>
 
         </div>
 
     </div>
-
-</div>
-
-
 </div>
 
 <script>
