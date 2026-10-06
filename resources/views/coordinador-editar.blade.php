@@ -1,7 +1,7 @@
 @extends('layout')
 
 @section('content')
-<<<<<<< HEAD
+
 <h1>Coordinador: {{ $coordinador->nombre }}</h1>
 <form class="card card-body mb-3" action="{{ route('coordinador.save',$coordinador->id) }}" method="post">@csrf
 @foreach(['nombre','apellidos','username','email'] as $field)<label for="{{ $field }}">{{ ucfirst($field) }}</label><input id="{{ $field }}" name="{{ $field }}" value="{{ old($field,$coordinador->$field) }}" class="form-control mb-3" @if($field!=='apellidos') required @endif>@endforeach
@@ -12,7 +12,7 @@
 <form method="post" action="{{ route('coordinador.permisos',$coordinador->id) }}" class="card card-body">@csrf<h2 class="h5">Permisos por sección</h2>
 @foreach(config('dossier.sections') as $section=>$fields)<div class="permission-row"><strong>{{ config('dossier.section_labels.'.$section,ucfirst($section)) }}</strong> <label class="choice-label"><input name="permisos[{{ $section }}][ver]" type="checkbox" value="1" @checked($permisos[$section]->puede_ver??false)> Consultar</label> <label class="choice-label"><input name="permisos[{{ $section }}][editar]" type="checkbox" value="1" @checked($permisos[$section]->puede_editar??false)> Editar</label></div>@endforeach
 <label for="motivo">Motivo del cambio de permisos</label><textarea name="motivo" id="motivo" class="form-control my-3" maxlength="2000" required></textarea><button class="btn btn-primary">Guardar permisos</button></form>
-=======
+
 
 <style>
     :root {
@@ -877,5 +877,4 @@
 
 </div>
 
->>>>>>> c285146 (agregando nuevas vistas de acuerdo con los colores de la escuela dentro del panel administrativo)
 @endsection

@@ -511,7 +511,6 @@
         </div>
 
     </form>
->>>>>>> c285146 (agregando nuevas vistas de acuerdo con los colores de la escuela dentro del panel administrativo)
 </div>
 
 <script>

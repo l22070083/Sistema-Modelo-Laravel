@@ -1,7 +1,7 @@
 @extends('layout')
-<<<<<<< HEAD
+
 @section('content')<h1>Alertas de salud</h1><p>Los indicadores cuentan respuestas afirmativas de riesgo medio o alto. La clasificación y la prioridad del expediente incluyen la valoración institucional cuando existe.</p><x-table-scroll label="Alertas de salud"><table class="table"><thead><tr><th>Alumno</th><th>Licenciatura</th><th>Indicadores por respuestas</th><th>Clasificación</th><th>Prioridad</th><th>Última respuesta de salud</th></tr></thead><tbody>@foreach($rows as $row)<tr><td><a href="{{ route('resultados',$row->id) }}">{{ $row->nombre }} {{ $row->apellidos }}</a></td><td>{{ $row->licenciatura }}</td><td>{{ $row->alertas }}</td><td>{{ implode(', ',json_decode($row->categoria,true)?:[]) }}</td><td>{{ $row->prioritaria?'Prioritaria':'Sin prioridad marcada' }}</td><td>{{ $row->ultima }}</td></tr>@endforeach</tbody></table></x-table-scroll>@endsection
-=======
+
 
 @section('title', 'Alertas de Salud')
 
@@ -431,4 +431,4 @@
 </div>
 
 @endsection
->>>>>>> c285146 (agregando nuevas vistas de acuerdo con los colores de la escuela dentro del panel administrativo)
+

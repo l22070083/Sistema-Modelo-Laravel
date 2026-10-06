@@ -3,7 +3,7 @@
 @section('title', 'Coordinadores')
 
 @section('content')
-<<<<<<< HEAD
+
 <h1>Coordinadores</h1>
 <section class="card card-body mb-4"><h2 class="h5">Designar una cuenta registrada como coordinador</h2><p>Selecciona la cuenta local o Microsoft. Su acceso quedará limitado a las secciones que autorices después.</p>
 <form method="post" action="{{ route('coordinadores.designar') }}" class="row g-3">@csrf
@@ -25,7 +25,7 @@
 @empty<tr><td colspan="4">No hay coordinadores registrados.</td></tr>@endforelse
 </tbody></table></x-table-scroll>
 {{ $coordinadores->links() }}
-=======
+
 
 <style>
     :root {
@@ -827,5 +827,5 @@
 
 </div>
 
->>>>>>> c285146 (agregando nuevas vistas de acuerdo con los colores de la escuela dentro del panel administrativo)
+
 @endsection

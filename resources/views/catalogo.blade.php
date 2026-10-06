@@ -3,7 +3,7 @@
 @section('title', 'Catálogo: ' . ucfirst($catalog))
 
 @section('content')
-<<<<<<< HEAD
+
 <h1>Catálogo: {{ ucfirst($catalog) }}</h1>
 <form id="{{ $editing ? 'editar-registro' : 'nuevo-registro' }}" class="card card-body mb-4" method="post" action="{{ $editing ? route('catalogo.save', [$catalog,$editing->id]) : route('catalogo.save', $catalog) }}">@csrf
 <h2 class="h5">{{ $editing ? 'Editar' : 'Crear' }}</h2><label for="nombre">Nombre</label><input name="nombre" id="nombre" class="form-control mb-3" value="{{ old('nombre',$editing?->nombre) }}" required maxlength="{{ $catalog==='genero'?50:100 }}">
@@ -13,7 +13,7 @@
 <label for="periodo">Periodo</label><input id="periodo" name="periodo" class="form-control mb-3" value="{{ old('periodo',$editing?->periodo) }}" maxlength="20">
 @endif<button class="btn btn-primary">Guardar</button></form>
 <x-table-scroll label="Catálogo"><table class="table"><thead><tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Acción</th></tr></thead><tbody>@foreach($rows as $row)<tr><td>{{ $row->id }}</td><td>{{ $row->nombre }}</td><td>{{ isset($row->estado)?($row->estado?'Activo':'Inactivo'):'—' }}</td><td><a href="{{ route('catalogo.edit',[$catalog,$row->id]) }}">Editar</a></td></tr>@endforeach</tbody></table></x-table-scroll>{{ $rows->links() }}
-=======
+
 
 <style>
     :root {
@@ -593,5 +593,5 @@
 
 </div>
 
->>>>>>> c285146 (agregando nuevas vistas de acuerdo con los colores de la escuela dentro del panel administrativo)
+
 @endsection
