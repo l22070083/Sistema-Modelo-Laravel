@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CoordinatorController extends Controller
@@ -104,21 +105,53 @@ class CoordinatorController extends Controller
     public function permissions(Request $request, int $id): RedirectResponse
     {
         User::where('rol_id', 2)->findOrFail($id);
-        $rules = ['motivo' => 'required|string|max:2000', 'permisos' => ['array:'.implode(',', array_keys(config('dossier.sections')))]];
-        foreach (array_keys(config('dossier.sections')) as $section) {
-            $rules['permisos.'.$section] = 'array:ver,editar';
-            $rules['permisos.'.$section.'.ver'] = 'boolean';
+
+        $sections = array_keys(config('dossier.sections'));
+
+        $rules = [
+            'motivo'   => 'required|string|max:2000',
+            'permisos' => ['array:'.implode(',', $sections)],
+        ];
+        foreach ($sections as $section) {
+            $rules['permisos.'.$section]           = 'array:ver,editar';
+            $rules['permisos.'.$section.'.ver']    = 'boolean';
             $rules['permisos.'.$section.'.editar'] = 'boolean';
         }
         $data = $request->validate($rules);
-        DB::transaction(function () use ($data, $id): void {
-            User::lockForUpdate()->findOrFail($id);
-            foreach (array_keys(config('dossier.sections')) as $section) {
-                $grant = $data['permisos'][$section] ?? [];
-                abort_if(! empty($grant['editar']) && empty($grant['ver']), 422, 'Editar requiere permiso de consulta.');
-                DB::table('coordinador_permiso')->updateOrInsert(['coordinador_id' => $id, 'seccion' => $section], ['puede_ver' => (int) ($grant['ver'] ?? 0), 'puede_editar' => (int) ($grant['editar'] ?? 0), 'otorgado_por' => auth()->id(), 'updated_at' => now()]);
+
+        // Validar TODAS las secciones antes de tocar la base de datos
+        $errors = [];
+        foreach ($sections as $section) {
+            $grant = $data['permisos'][$section] ?? [];
+            if (! empty($grant['editar']) && empty($grant['ver'])) {
+                $label = config('dossier.section_labels.'.$section, ucfirst($section));
+                $errors['permisos.'.$section.'.editar'] = 'Editar requiere permiso de consulta en la sección «'.$label.'».';
             }
-            Audit::record('PERMISOS_COORDINADOR', $data['motivo'], ['coordinador_id' => $id, 'permisos' => $data['permisos'] ?? []]);
+        }
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
+
+        DB::transaction(function () use ($data, $id, $sections): void {
+            User::lockForUpdate()->findOrFail($id);
+
+            foreach ($sections as $section) {
+                $grant = $data['permisos'][$section] ?? [];
+                DB::table('coordinador_permiso')->updateOrInsert(
+                    ['coordinador_id' => $id, 'seccion' => $section],
+                    [
+                        'puede_ver'    => (int) ($grant['ver'] ?? 0),
+                        'puede_editar' => (int) ($grant['editar'] ?? 0),
+                        'otorgado_por' => auth()->id(),
+                        'updated_at'   => now(),
+                    ]
+                );
+            }
+
+            Audit::record('PERMISOS_COORDINADOR', $data['motivo'], [
+                'coordinador_id' => $id,
+                'permisos'       => $data['permisos'] ?? [],
+            ]);
         });
 
         return back()->with('success', 'Permisos actualizados y auditados.');

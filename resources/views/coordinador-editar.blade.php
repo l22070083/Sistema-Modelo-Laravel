@@ -651,6 +651,18 @@
 
                 <div class="coord-card-body">
 
+                    @if ($errors->any())
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    @php $reenvio = old('motivo') !== null; @endphp
+
                     <form method="post"
                           action="{{ route('coordinador.permisos', $coordinador->id) }}">
 
@@ -676,7 +688,9 @@
                                         <input name="permisos[{{ $section }}][ver]"
                                                type="checkbox"
                                                value="1"
-                                               @checked($permisos[$section]->puede_ver ?? false)>
+                                               @checked($reenvio
+                                                    ? old('permisos.'.$section.'.ver')
+                                                    : ($permisos[$section]->puede_ver ?? false))>
                                         Puede consultar
                                     </label>
 
@@ -684,7 +698,9 @@
                                         <input name="permisos[{{ $section }}][editar]"
                                                type="checkbox"
                                                value="1"
-                                               @checked($permisos[$section]->puede_editar ?? false)>
+                                               @checked($reenvio
+                                                    ? old('permisos.'.$section.'.editar')
+                                                    : ($permisos[$section]->puede_editar ?? false))>
                                         Puede editar
                                     </label>
 
@@ -704,7 +720,7 @@
                                       class="form-control"
                                       maxlength="2000"
                                       required
-                                      placeholder="Describe el motivo por el cual se modifican los permisos..."></textarea>
+                                      placeholder="Describe el motivo por el cual se modifican los permisos...">{{ old('motivo') }}</textarea>
                         </div>
 
                         <button class="btn coord-btn-primary mt-3">
@@ -712,6 +728,23 @@
                         </button>
 
                     </form>
+
+                    <script>
+                        document.querySelectorAll('.permission-row').forEach(function (row) {
+                            const ver = row.querySelector('input[name$="[ver]"]');
+                            const editar = row.querySelector('input[name$="[editar]"]');
+
+                            // Marcar "editar" marca "consultar" automáticamente
+                            editar.addEventListener('change', function () {
+                                if (editar.checked) ver.checked = true;
+                            });
+
+                            // Desmarcar "consultar" desmarca "editar"
+                            ver.addEventListener('change', function () {
+                                if (!ver.checked) editar.checked = false;
+                            });
+                        });
+                    </script>
 
                 </div>
 
