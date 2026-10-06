@@ -4,29 +4,6 @@
 
 @section('content')
 
-<h1>Coordinadores</h1>
-<section class="card card-body mb-4"><h2 class="h5">Designar una cuenta registrada como coordinador</h2><p>Selecciona la cuenta local o Microsoft. Su acceso quedará limitado a las secciones que autorices después.</p>
-<form method="post" action="{{ route('coordinadores.designar') }}" class="row g-3">@csrf
-<div class="col-md-6"><label class="form-label" for="candidato">Cuenta registrada</label><select id="candidato" name="user_id" class="form-select" required><option value="">Selecciona una cuenta</option>@foreach($candidatos as $candidate)<option value="{{ $candidate->id }}">{{ $candidate->nombre }} {{ $candidate->apellidos }} — {{ $candidate->email }}</option>@endforeach</select></div>
-<div class="col-md-6"><label for="motivo-designacion" class="form-label">Motivo de designación</label><textarea id="motivo-designacion" name="motivo" class="form-control" required maxlength="2000"></textarea></div>
-<div><button class="btn btn-primary">Designar coordinador y configurar permisos</button></div>
-</form></section>
-<div class="card mb-4" id="nuevo-coordinador"><div class="card-body">
-<h2 class="h5">Crear coordinador</h2>
-<p>La cuenta quedará activa. Después podrás asignar sus grupos y permisos por sección.</p>
-<form method="post" action="{{ route('coordinadores.create') }}" class="row g-3">@csrf
-    @include('partials.account-fields')
-    <div class="col-12"><button class="btn btn-primary">Crear coordinador y configurar permisos</button></div>
-</form>
-</div></div>
-<x-table-scroll label="Listado de coordinadores"><table class="table"><thead><tr><th>Nombre</th><th>Usuario</th><th>Correo</th><th>Estado</th></tr></thead><tbody>
-@forelse($coordinadores as $coordinador)
-<tr><td><a href="{{ route('coordinador.edit',$coordinador->id) }}">{{ $coordinador->nombre }} {{ $coordinador->apellidos }}</a></td><td>{{ $coordinador->username }}</td><td>{{ $coordinador->email }}</td><td>{{ $coordinador->status === 10 ? 'Activo' : 'Inactivo' }}</td></tr>
-@empty<tr><td colspan="4">No hay coordinadores registrados.</td></tr>@endforelse
-</tbody></table></x-table-scroll>
-{{ $coordinadores->links() }}
-
-
 <style>
     :root {
         --coord-blue: #174a88;
@@ -166,7 +143,8 @@
 
     /* FORMULARIOS */
 
-    .coord-label {
+    .coord-label,
+    .coordinadores-page .form-label {
         color: #34465d;
         font-size: .87rem;
         font-weight: 650;
@@ -429,403 +407,220 @@
 </style>
 
 <div class="coordinadores-page">
+    <div class="coordinadores-container">
 
-<div class="coordinadores-container">
-
-
-    {{-- ENCABEZADO --}}
-    <header class="coordinadores-header">
-
-        <div class="coordinadores-header-content">
-
-            <div class="coordinadores-icon">
-                👨‍🏫
-            </div>
-
-            <div>
-
-                <h1>
-                    Coordinadores
-                </h1>
-
-                <p>
-                    Gestión de cuentas, designaciones y coordinadores
-                    del Sistema de Tutorías Académicas
-                </p>
-
-            </div>
-
-        </div>
-
-    </header>
-
-
-    {{-- FORMULARIOS SUPERIORES --}}
-    <div class="coordinadores-grid">
-
-
-        {{-- DESIGNAR CUENTA --}}
-        <section class="coord-card">
-
-            <div class="coord-card-header">
-
-                <div class="coord-card-icon">
-                    🔗
-                </div>
+        {{-- ENCABEZADO --}}
+        <header class="coordinadores-header">
+            <div class="coordinadores-header-content">
+                <div class="coordinadores-icon">👨‍🏫</div>
 
                 <div>
-
-                    <h2>
-                        Designar cuenta registrada
-                    </h2>
-
+                    <h1>Coordinadores</h1>
                     <p>
-                        Convertir una cuenta existente en coordinador
+                        Gestión de cuentas, designaciones y coordinadores
+                        del Sistema de Tutorías Académicas
                     </p>
-
                 </div>
-
             </div>
+        </header>
 
+        {{-- FORMULARIOS SUPERIORES --}}
+        <div class="coordinadores-grid">
 
-            <div class="coord-card-body">
+            {{-- DESIGNAR CUENTA --}}
+            <section class="coord-card">
 
-                <div class="coord-info">
-
-                    <div>ℹ️</div>
+                <div class="coord-card-header">
+                    <div class="coord-card-icon">🔗</div>
 
                     <div>
-                        <strong>Nota:</strong>
-                        el acceso quedará limitado a las secciones
-                        que autorices posteriormente.
+                        <h2>Designar cuenta registrada</h2>
+                        <p>Convertir una cuenta existente en coordinador</p>
                     </div>
-
                 </div>
 
+                <div class="coord-card-body">
 
-                <form method="post"
-                      action="{{ route('coordinadores.designar') }}">
+                    <div class="coord-info">
+                        <div>ℹ️</div>
 
-                    @csrf
-
-                    <div class="mb-3">
-
-                        <label class="coord-label"
-                               for="candidato">
-
-                            Cuenta registrada
-
-                        </label>
-
-                        <select id="candidato"
-                                name="user_id"
-                                class="form-select"
-                                required>
-
-                            <option value="">
-                                Selecciona una cuenta
-                            </option>
-
-                            @foreach($candidatos as $candidate)
-
-                                <option value="{{ $candidate->id }}">
-
-                                    {{ $candidate->nombre }}
-                                    {{ $candidate->apellidos }}
-                                    —
-                                    {{ $candidate->email }}
-
-                                </option>
-
-                            @endforeach
-
-                        </select>
-
+                        <div>
+                            <strong>Nota:</strong>
+                            el acceso quedará limitado a las secciones
+                            que autorices posteriormente.
+                        </div>
                     </div>
 
+                    <form method="post" action="{{ route('coordinadores.designar') }}">
+                        @csrf
 
-                    <div class="mb-3">
-
-                        <label for="motivo-designacion"
-                               class="coord-label">
-
-                            Motivo de designación
-
-                        </label>
-
-                        <textarea id="motivo-designacion"
-                                  name="motivo"
-                                  class="form-control"
-                                  required
-                                  maxlength="2000"
-                                  placeholder="Indica el motivo de la designación..."></textarea>
-
-                    </div>
-
-
-                    <button class="btn coord-btn-primary w-100">
-
-                        ✓ Designar coordinador
-
-                    </button>
-
-                </form>
-
-            </div>
-
-        </section>
-
-
-        {{-- DAR DE ALTA --}}
-        <section class="coord-card">
-
-            <div class="coord-card-header">
-
-                <div class="coord-card-icon">
-                    ➕
-                </div>
-
-                <div>
-
-                    <h2>
-                        Dar de alta
-                    </h2>
-
-                    <p>
-                        Crear una nueva cuenta de coordinador
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <div class="coord-card-body">
-
-                <form method="post"
-                      action="{{ route('coordinadores.create') }}">
-
-                    @csrf
-
-                    <div class="row g-3">
-
-                        @foreach([
-                            'nombre' => 'Nombre',
-                            'apellidos' => 'Apellidos',
-                            'username' => 'Usuario',
-                            'email' => 'Correo'
-                        ] as $field => $label)
-
-                            <div class="col-md-6">
-
-                                <label class="coord-label"
-                                       for="{{ $field }}">
-
-                                    {{ $label }}
-
-                                </label>
-
-                                <input class="form-control"
-                                       id="{{ $field }}"
-                                       name="{{ $field }}"
-                                       value="{{ old($field) }}"
-                                       type="{{ $field === 'email' ? 'email' : 'text' }}"
-                                       maxlength="255"
-                                       @if($field != 'apellidos') required @endif>
-
-                            </div>
-
-                        @endforeach
-
-
-                        <div class="col-12">
-
-                            <label class="coord-label"
-                                   for="password">
-
-                                Contraseña
-
+                        <div class="mb-3">
+                            <label class="coord-label" for="candidato">
+                                Cuenta registrada
                             </label>
 
-                            <input class="form-control"
-                                   id="password"
-                                   name="password"
-                                   type="password"
-                                   required
-                                   minlength="8"
-                                   autocomplete="new-password">
+                            <select id="candidato"
+                                    name="user_id"
+                                    class="form-select"
+                                    required>
 
-                            <small class="coord-help">
-                                Al menos 8 caracteres, una mayúscula
-                                y un carácter especial.
-                            </small>
+                                <option value="">Selecciona una cuenta</option>
 
+                                @foreach($candidatos as $candidate)
+                                    <option value="{{ $candidate->id }}">
+                                        {{ $candidate->nombre }}
+                                        {{ $candidate->apellidos }}
+                                        —
+                                        {{ $candidate->email }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
 
+                        <div class="mb-3">
+                            <label for="motivo-designacion" class="coord-label">
+                                Motivo de designación
+                            </label>
 
-                        <div class="col-12">
-
-                            <button class="btn coord-btn-primary w-100">
-
-                                + Dar de alta coordinador
-
-                            </button>
-
+                            <textarea id="motivo-designacion"
+                                      name="motivo"
+                                      class="form-control"
+                                      required
+                                      maxlength="2000"
+                                      placeholder="Indica el motivo de la designación..."></textarea>
                         </div>
 
+                        <button class="btn coord-btn-primary w-100">
+                            ✓ Designar coordinador y configurar permisos
+                        </button>
+                    </form>
+
+                </div>
+            </section>
+
+            {{-- DAR DE ALTA --}}
+            <section class="coord-card" id="nuevo-coordinador">
+
+                <div class="coord-card-header">
+                    <div class="coord-card-icon">➕</div>
+
+                    <div>
+                        <h2>Crear coordinador</h2>
+                        <p>La cuenta quedará activa. Después podrás asignar sus grupos y permisos por sección.</p>
                     </div>
+                </div>
 
-                </form>
+                <div class="coord-card-body">
 
+                    <form method="post" action="{{ route('coordinadores.create') }}">
+                        @csrf
+
+                        <div class="row g-3">
+
+                            {{-- Campos de cuenta actuales del proyecto --}}
+                            @include('partials.account-fields')
+
+                            <div class="col-12">
+                                <button class="btn coord-btn-primary w-100">
+                                    + Crear coordinador y configurar permisos
+                                </button>
+                            </div>
+
+                        </div>
+                    </form>
+
+                </div>
+            </section>
+
+        </div>
+
+        {{-- LISTADO --}}
+        <section class="coord-table-wrapper">
+
+            <div class="coord-table-header">
+                <div>
+                    <h2>Coordinadores registrados</h2>
+                    <p>
+                        Consulta el estado y administra las cuentas
+                        registradas.
+                    </p>
+                </div>
             </div>
+
+            <div class="table-responsive">
+                <table class="table">
+
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Usuario</th>
+                            <th>Correo</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @forelse($coordinadores as $coordinador)
+
+                            <tr>
+                                <td>
+                                    <a class="coord-name"
+                                       href="{{ route('coordinador.edit', $coordinador->id) }}">
+                                        {{ $coordinador->nombre }}
+                                        {{ $coordinador->apellidos }}
+                                    </a>
+                                </td>
+
+                                <td>{{ $coordinador->username }}</td>
+
+                                <td class="coord-email">{{ $coordinador->email }}</td>
+
+                                <td>
+                                    @if($coordinador->status === 10)
+                                        <span class="coord-status active">
+                                            <span class="coord-status-dot"></span>
+                                            Activo
+                                        </span>
+                                    @else
+                                        <span class="coord-status inactive">
+                                            <span class="coord-status-dot"></span>
+                                            Inactivo
+                                        </span>
+                                    @endif
+                                </td>
+                            </tr>
+
+                        @empty
+
+                            <tr>
+                                <td colspan="4" class="coord-empty">
+                                    <div class="coord-empty-icon">👨‍🏫</div>
+                                    No hay coordinadores registrados.
+                                </td>
+                            </tr>
+
+                        @endforelse
+
+                    </tbody>
+
+                </table>
+            </div>
+
+            {{-- PAGINACIÓN --}}
+            @if($coordinadores->hasPages())
+                <div class="coord-pagination">
+                    {{ $coordinadores->links() }}
+                </div>
+            @endif
 
         </section>
 
-    </div>
-
-
-    {{-- LISTADO --}}
-    <section class="coord-table-wrapper">
-
-        <div class="coord-table-header">
-
-            <div>
-
-                <h2>
-                    Coordinadores registrados
-                </h2>
-
-                <p>
-                    Consulta el estado y administra las cuentas
-                    registradas.
-                </p>
-
-            </div>
-
+        <div class="text-center text-muted small mt-4">
+            Sistema de Tutorías Académicas · Gestión de coordinadores
         </div>
 
-
-        <div class="table-responsive">
-
-            <table class="table">
-
-                <thead>
-
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Usuario</th>
-                        <th>Correo</th>
-                        <th>Estado</th>
-                    </tr>
-
-                </thead>
-
-
-                <tbody>
-
-                    @forelse($coordinadores as $coordinador)
-
-                        <tr>
-
-                            <td>
-
-                                <a class="coord-name"
-                                   href="{{ route('coordinador.edit', $coordinador->id) }}">
-
-                                    {{ $coordinador->nombre }}
-                                    {{ $coordinador->apellidos }}
-
-                                </a>
-
-                            </td>
-
-
-                            <td>
-                                {{ $coordinador->username }}
-                            </td>
-
-
-                            <td class="coord-email">
-                                {{ $coordinador->email }}
-                            </td>
-
-
-                            <td>
-
-                                @if($coordinador->status === 10)
-
-                                    <span class="coord-status active">
-
-                                        <span class="coord-status-dot"></span>
-
-                                        Activo
-
-                                    </span>
-
-                                @else
-
-                                    <span class="coord-status inactive">
-
-                                        <span class="coord-status-dot"></span>
-
-                                        Inactivo
-
-                                    </span>
-
-                                @endif
-
-                            </td>
-
-                        </tr>
-
-                    @empty
-
-                        <tr>
-
-                            <td colspan="4"
-                                class="coord-empty">
-
-                                <div class="coord-empty-icon">
-                                    👨‍🏫
-                                </div>
-
-                                No hay coordinadores registrados.
-
-                            </td>
-
-                        </tr>
-
-                    @endforelse
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-
-        {{-- PAGINACIÓN --}}
-        @if($coordinadores->hasPages())
-
-            <div class="coord-pagination">
-
-                {{ $coordinadores->links() }}
-
-            </div>
-
-        @endif
-
-    </section>
-
-
-    <div class="text-center text-muted small mt-4">
-        Sistema de Tutorías Académicas · Gestión de coordinadores
     </div>
-
 </div>
-
-
-</div>
-
 
 @endsection
