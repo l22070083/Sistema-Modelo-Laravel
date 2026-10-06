@@ -14,6 +14,13 @@ use Illuminate\View\View;
 
 class CoordinatorController extends Controller
 {
+    public function destroy(int $id): RedirectResponse
+    {
+        \App\Services\AccountRemoval::remove($id, User::COORDINADOR);
+
+        return redirect()->route('coordinadores')->with('success', 'Coordinador eliminado del listado. Su historial institucional se conserva.');
+    }
+
     public function designate(Request $request): RedirectResponse
     {
         $data = $request->validate(['user_id' => 'required|integer|exists:user,id', 'motivo' => 'required|string|max:2000']);

@@ -719,6 +719,7 @@
 
         </div>
 
+        <div class="my-3">@include('partials.account-delete', ['account' => $coordinador, 'deleteRoute' => 'coordinador.destroy'])</div>
         <div class="coord-footer">
             Sistema de Tutorías Académicas · Administración de coordinadores
         </div>

@@ -275,6 +275,9 @@
         </div>
     </div>
 
+    @if(auth()->user()->rol_id === 1)
+    <div class="mb-3"><a class="btn btn-primary" href="{{ route('alumno.create') }}">Crear alumno</a></div>
+    @endif
     {{-- Tabla --}}
     <div class="students-card">
 
@@ -299,6 +302,7 @@
                         <th>Nombre</th>
                         <th>Usuario</th>
                         <th>Matrícula</th>
+                        <th>Estado</th>
                         <th>Acción</th>
                     </tr>
                 </thead>
@@ -328,6 +332,7 @@
                                 </span>
                             </td>
 
+                            <td><span class="badge {{ $student->status === 10 ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $student->status === 10 ? 'Activo' : ($student->verification_token !== null ? 'Pendiente' : 'De baja') }}</span></td>
                             <td>
                                 <a
                                     href="{{ route('alumno.ver', $student->id) }}"
@@ -336,6 +341,17 @@
                                     <span>👁</span>
                                     Ver alumno
                                 </a>
+                                @if(auth()->user()->rol_id === 1)
+                                    <a class="btn btn-outline-primary btn-sm ms-2" href="{{ route('alumno.editar', $student->id) }}">Actualizar</a>
+                                    @include('partials.account-delete', ['account' => $student, 'deleteRoute' => 'alumno.destroy'])
+                                @endif
+                                @if(auth()->user()->rol_id === \App\Models\User::ADMIN && in_array($student->status, [0, 10], true) && $student->verification_token === null)
+                                    <form class="d-inline-block ms-2" method="post" action="{{ route('alumno.status', $student->id) }}" onsubmit="return confirm('¿Confirmas el cambio de estado de este alumno? Sus datos y expediente se conservarán.');">
+                                        @csrf
+                                        <input type="hidden" name="status" value="{{ $student->status === 10 ? 0 : 10 }}">
+                                        <button class="btn btn-sm {{ $student->status === 10 ? 'btn-outline-danger' : 'btn-outline-success' }}">{{ $student->status === 10 ? 'Dar de baja' : 'Reactivar' }}</button>
+                                    </form>
+                                @endif
                             </td>
 
                         </tr>
@@ -343,7 +359,7 @@
                     @empty
 
                         <tr>
-                            <td colspan="4" class="empty-state">
+                            <td colspan="5" class="empty-state">
 
                                 <div class="empty-icon">
                                     👨‍🎓

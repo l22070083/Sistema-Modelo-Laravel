@@ -58,6 +58,9 @@ Route::middleware(['auth', 'role:1'])->group(function () {
     Route::get('/catalogos/{catalog}/{id}', [CatalogController::class, 'edit'])->name('catalogo.edit');
     Route::post('/catalogos/{catalog}/{id?}', [CatalogController::class, 'save'])->name('catalogo.save');
     Route::post('/catalogos/{catalog}/{id}/estado', [CatalogController::class, 'status'])->name('catalogo.status');
+    Route::delete('/alumnos/{id}', [StudentController::class, 'destroy'])->name('alumno.destroy');
+    Route::delete('/coordinadores/{id}', [CoordinatorController::class, 'destroy'])->name('coordinador.destroy');
+    Route::post('/alumnos/{id}/estado', [StudentController::class, 'status'])->name('alumno.status');
     Route::get('/coordinadores/{id}', [CoordinatorController::class, 'edit'])->name('coordinador.edit');
     Route::post('/coordinadores/{id}', [CoordinatorController::class, 'save'])->name('coordinador.save');
     Route::post('/coordinadores/{id}/estado', [CoordinatorController::class, 'status'])->name('coordinador.status');

@@ -556,6 +556,7 @@
                             <th>Usuario</th>
                             <th>Correo</th>
                             <th>Estado</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
 
@@ -589,12 +590,21 @@
                                         </span>
                                     @endif
                                 </td>
+                                <td>
+                                    <a class="btn btn-outline-primary btn-sm mb-2" href="{{ route('coordinador.edit', $coordinador->id) }}">Ver / Actualizar</a>
+                                    @include('partials.account-delete', ['account' => $coordinador, 'deleteRoute' => 'coordinador.destroy'])
+                                    <form method="post" action="{{ route('coordinador.status', $coordinador->id) }}" onsubmit="return confirm('¿Confirmas el cambio de estado de este coordinador? La baja bloqueará su acceso y liberará sus grupos.');">
+                                        @csrf
+                                        <input type="hidden" name="status" value="{{ $coordinador->status === 10 ? 0 : 10 }}">
+                                        <button class="btn btn-sm {{ $coordinador->status === 10 ? 'btn-outline-danger' : 'btn-outline-success' }}">{{ $coordinador->status === 10 ? 'Dar de baja' : 'Reactivar' }}</button>
+                                    </form>
+                                </td>
                             </tr>
 
                         @empty
 
                             <tr>
-                                <td colspan="4" class="coord-empty">
+                                <td colspan="5" class="coord-empty">
                                     <div class="coord-empty-icon">👨‍🏫</div>
                                     No hay coordinadores registrados.
                                 </td>

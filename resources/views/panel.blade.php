@@ -3,21 +3,6 @@
 @section('content')
 <h1 class="school-heading">Escuela Modelo Valladolid</h1>
 <section class="dashboard-hero"><h2>¡Bienvenido, {{ auth()->user()->nombre }}!</h2><p>Sistema de Atención Oportuna y Detección de Riesgos Estudiantiles</p><span class="hero-badge"><x-icon name="chart"/>Panel de Control Actualizado</span><small>Consulta los expedientes y el seguimiento de salud de tus alumnos.</small></section>
-@if(auth()->user()->rol_id === \App\Models\User::ADMIN)
-<section class="card card-body mb-4">
-    <h2 class="h5">Crear registros</h2>
-    <div class="d-flex flex-wrap gap-2">
-        <a class="btn btn-primary" href="{{ route('alumno.create') }}">Crear alumno</a>
-        <a class="btn btn-outline-primary" href="{{ route('coordinadores') }}#nuevo-coordinador">Crear coordinador</a>
-        <a class="btn btn-outline-primary" href="{{ route('administradores') }}#nuevo-administrador">Crear administrador</a>
-        @foreach(['licenciatura' => 'Crear licenciatura', 'grupo' => 'Crear grupo', 'genero' => 'Crear género'] as $catalog => $label)
-        <a class="btn btn-outline-primary" href="{{ route('catalogo', $catalog) }}#nuevo-registro">{{ $label }}</a>
-        @endforeach
-        <a class="btn btn-outline-primary" href="{{ route('encuestas') }}#nueva-encuesta">Crear encuesta</a>
-        <a class="btn btn-outline-primary" href="{{ route('encuestas') }}#nueva-pregunta">Crear pregunta</a>
-    </div>
-</section>
-@endif
 @if($canSeeHealth)
 <div class="metric-grid">
 @foreach(['sin_alarma'=>['heart','Sin dato de alarma','success'],'seguimiento'=>['alert','En Seguimiento','warning'],'prioritaria'=>['pulse','Atención Prioritaria','danger']] as $key=>$metric)

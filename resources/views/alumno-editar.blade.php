@@ -348,6 +348,14 @@
             {{-- CAMPOS ORIGINALES --}}
             <div class="profile-fields">
 
+                @foreach(['nombre' => 'Nombre', 'apellidos' => 'Apellidos', 'username' => 'Usuario', 'email' => 'Correo electrónico'] as $field => $label)
+                    <label for="{{ $field }}">{{ $label }}</label>
+                    <input class="form-control mb-3" id="{{ $field }}" name="{{ $field }}" type="{{ $field === 'email' ? 'email' : 'text' }}" maxlength="255" value="{{ old($field, $user->$field) }}" required>
+                @endforeach
+                <label for="password">Nueva contraseña (opcional)</label>
+                <input class="form-control mb-3" id="password" name="password" type="password" autocomplete="new-password">
+                <label for="password_confirmation">Confirmar nueva contraseña</label>
+                <input class="form-control mb-3" id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password">
                 @include('perfil-campos')
 
             </div>

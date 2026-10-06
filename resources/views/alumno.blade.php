@@ -400,6 +400,9 @@
 
             {{-- ACCIONES --}}
             <div class="student-actions">
+                @if(auth()->user()->rol_id === 1)
+                    @include('partials.account-delete', ['account' => $student, 'deleteRoute' => 'alumno.destroy'])
+                @endif
 
                 @if(auth()->user()->rol_id === 1)
 

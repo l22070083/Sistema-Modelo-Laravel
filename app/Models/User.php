@@ -22,6 +22,15 @@ class User extends Authenticatable
 
     public const INACTIVE = 0;
 
+    public const DELETED = -1;
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('not_deleted', function (Builder $query): void {
+            $query->where($query->getModel()->qualifyColumn('status'), '!=', self::DELETED);
+        });
+    }
+
     protected $table = 'user';
 
     protected $guarded = ['id', 'rol_id', 'status', 'password_hash', 'auth_key', 'verification_token', 'password_reset_token'];
