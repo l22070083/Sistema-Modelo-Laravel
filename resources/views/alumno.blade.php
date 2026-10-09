@@ -371,7 +371,6 @@
             {{-- EXPEDIENTE --}}
             @if(
                 \App\Services\SectionAccess::can('personales', true) &&
-                \App\Services\SectionAccess::can('antecedentes', true) &&
                 \App\Services\SectionAccess::can('cuestionario', true)
             )
 

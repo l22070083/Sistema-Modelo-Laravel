@@ -15,20 +15,17 @@ class AdminCreationTest extends TestCase
 
     private int $degree;
 
-    private int $gender;
-
     protected function setUp(): void
     {
         parent::setUp();
         $this->degree = DB::table('licenciatura')->insertGetId(['nombre' => 'Ingeniería de prueba', 'estado' => 1]);
-        $this->gender = DB::table('genero')->insertGetId(['nombre' => 'Otro']);
     }
 
     private function account(string $name = 'nueva-cuenta'): array
     {
         return ['nombre' => 'Cuenta de prueba', 'apellidos' => 'Prueba', 'username' => $name, 'email' => $name.'@example.test',
             'password' => 'ClaveModelo!2026', 'password_confirmation' => 'ClaveModelo!2026',
-            'matricula' => '000123', 'licenciatura_id' => $this->degree, 'genero_id' => $this->gender];
+            'matricula' => '000123', 'licenciatura_id' => $this->degree];
     }
 
     public function test_admin_creates_active_accounts_with_fixed_roles_and_audited_logins(): void
@@ -65,7 +62,7 @@ class AdminCreationTest extends TestCase
         $admin = User::factory()->create(['rol_id' => User::ADMIN]);
         $this->actingAs($admin)->post('/coordinadores', $this->account('coordinacion'))->assertRedirect();
         $created = User::where('username', 'coordinacion')->firstOrFail();
-        $this->assertSame(5, DB::table('coordinador_permiso')->where('coordinador_id', $created->id)->count());
+        $this->assertSame(count(config('dossier.sections')), DB::table('coordinador_permiso')->where('coordinador_id', $created->id)->count());
         $this->assertSame(0, DB::table('coordinador_permiso')->where('coordinador_id', $created->id)->sum('puede_ver'));
         $this->assertSame(0, DB::table('coordinador_permiso')->where('coordinador_id', $created->id)->sum('puede_editar'));
         $this->actingAs($created)->get('/panel')->assertOk()->assertDontSee('Crear registros')->assertDontSee('Listado de Alumnos');
@@ -129,7 +126,7 @@ class AdminCreationTest extends TestCase
         $otherDegree = DB::table('licenciatura')->insertGetId(['nombre' => 'Otra carrera', 'estado' => 1]);
         $otherGroup = DB::table('grupo')->insertGetId(['nombre' => 'Otro grupo', 'estado' => 1, 'licenciatura_id' => $otherDegree]);
         $inactiveGroup = DB::table('grupo')->insertGetId(['nombre' => 'Grupo inactivo', 'estado' => 0, 'licenciatura_id' => $this->degree]);
-        foreach ([['apellidos', ''], ['matricula', 'ABC123'], ['licenciatura_id', $inactive], ['genero_id', 999999], ['grupo_id', $otherGroup], ['grupo_id', $inactiveGroup]] as [$field, $value]) {
+        foreach ([['apellidos', ''], ['matricula', 'ABC123'], ['licenciatura_id', $inactive], ['grupo_id', $otherGroup], ['grupo_id', $inactiveGroup]] as [$field, $value]) {
             $this->post('/alumnos/crear', array_replace($this->account(), [$field => $value]))->assertSessionHasErrors($field);
         }
         $this->assertSame(1, User::count());
@@ -155,22 +152,20 @@ class AdminCreationTest extends TestCase
     public function test_admin_can_create_catalogs_surveys_and_questions_and_others_cannot(): void
     {
         $this->actingAs(User::factory()->create(['rol_id' => User::ADMIN]));
-        $this->get('/panel')->assertOk()->assertSee('Crear registros')->assertSee('Crear administrador');
+        $this->get('/panel')->assertOk()->assertDontSee('Crear registros')->assertDontSee('Crear administrador');
         $this->get('/alumnos/crear')->assertOk()->assertSee('password_confirmation');
         $this->get('/administradores')->assertOk()->assertSee('Listado de administradores');
         $this->post('/catalogos/licenciatura', ['nombre' => 'Nueva licenciatura', 'estado' => 1])->assertRedirect();
-        $this->post('/catalogos/genero', ['nombre' => 'Género de prueba'])->assertRedirect();
         $this->post('/catalogos/grupo', ['nombre' => 'Nuevo grupo', 'estado' => 1, 'licenciatura_id' => $this->degree, 'periodo' => '2026'])->assertRedirect();
         $this->post('/encuestas', ['titulo' => 'Nueva encuesta', 'descripcion' => 'Salud', 'estado' => 1])->assertRedirect();
         $survey = DB::table('encuesta')->where('titulo', 'Nueva encuesta')->value('id');
-        $this->post('/preguntas', ['encuesta_id' => $survey, 'planteamiento' => 'Pregunta de prueba', 'tipo_riesgo' => 'medio', 'status' => 1])->assertRedirect();
+        $this->post('/preguntas', ['encuesta_id' => $survey, 'planteamiento' => 'Pregunta de prueba', 'status' => 1])->assertRedirect();
         $this->assertDatabaseHas('licenciatura', ['nombre' => 'Nueva licenciatura']);
-        $this->assertDatabaseHas('genero', ['nombre' => 'Género de prueba']);
         $this->assertDatabaseHas('grupo', ['nombre' => 'Nuevo grupo']);
         $this->assertDatabaseHas('pregunta', ['planteamiento' => 'Pregunta de prueba', 'encuesta_id' => $survey]);
         foreach ([User::COORDINADOR, User::ALUMNO] as $role) {
             $this->actingAs(User::factory()->create(['rol_id' => $role]));
-            foreach (['/catalogos/licenciatura', '/catalogos/genero', '/catalogos/grupo', '/encuestas', '/preguntas'] as $path) {
+            foreach (['/catalogos/licenciatura', '/catalogos/grupo', '/encuestas', '/preguntas'] as $path) {
                 $this->post($path, [])->assertForbidden();
             }
         }

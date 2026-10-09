@@ -319,6 +319,7 @@
     <div class="catalog-card-body">
 
         <form
+            id="{{ $editing ? 'editar-registro' : 'nuevo-registro' }}"
             method="post"
             action="{{
                 $editing
@@ -346,7 +347,7 @@
                         class="form-control"
                         value="{{ old('nombre', $editing?->nombre) }}"
                         required
-                        maxlength="{{ $catalog === 'genero' ? 50 : 100 }}"
+                        maxlength="100"
                         placeholder="Ingresa el nombre"
                     >
 
@@ -354,8 +355,6 @@
 
 
                 {{-- Estado --}}
-                @if($catalog !== 'genero')
-
                     <div class="{{ $catalog === 'grupo' ? 'col-md-6' : 'col-md-4' }}">
 
                         <label
@@ -386,9 +385,6 @@
                         </select>
 
                     </div>
-
-                @endif
-
 
                 {{-- Campos exclusivos de grupo --}}
                 @if($catalog === 'grupo')
@@ -481,7 +477,7 @@
 
     </div>
 
-    <div class="table-responsive">
+    <x-table-scroll label="Catálogo">
 
         <table class="table catalog-table">
 
@@ -566,7 +562,7 @@
 
         </table>
 
-    </div>
+    </x-table-scroll>
 
 
     @if($rows->hasPages())

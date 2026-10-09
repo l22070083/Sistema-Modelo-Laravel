@@ -36,20 +36,19 @@ class MysqlCompatibilityTest extends TestCase
     {
         $admin = User::factory()->create(['rol_id' => 1]);
         $this->actingAs($admin)->get('/inicio')->assertRedirect('/panel');
-        foreach (['panel', 'notificaciones', 'coordinadores', 'administradores', 'alumnos/crear', 'encuestas', 'expedientes', 'atencion', 'alertas', 'resultados', 'reportes', 'catalogos/grupo', 'catalogos/licenciatura', 'catalogos/genero'] as $path) {
+        foreach (['panel', 'notificaciones', 'coordinadores', 'administradores', 'alumnos/crear', 'encuestas', 'expedientes', 'reportes', 'catalogos/grupo', 'catalogos/licenciatura'] as $path) {
             $this->get('/'.$path)->assertOk();
         }
         $email = 'mysql_'.bin2hex(random_bytes(5)).'@example.com';
         $this->post('/coordinadores', ['nombre' => 'Prueba MySQL', 'username' => 'mysql_'.bin2hex(random_bytes(5)), 'email' => $email, 'password' => 'ClaveModelo!2026', 'password_confirmation' => 'ClaveModelo!2026'])->assertRedirect();
         $this->assertDatabaseHas('user', ['email' => $email, 'rol_id' => 2, 'status' => 10]);
         $coordinator = User::where('email', $email)->firstOrFail();
-        $this->assertSame(5, DB::table('coordinador_permiso')->where('coordinador_id', $coordinator->id)->count());
+        $this->assertSame(4, DB::table('coordinador_permiso')->where('coordinador_id', $coordinator->id)->count());
         $this->assertDatabaseHas('auditoria_sistema', ['actor_id' => $admin->id, 'evento' => 'CREACION_COORDINADOR']);
         $studentEmail = 'mysql_alumno_'.bin2hex(random_bytes(5)).'@example.com';
         $degree = DB::table('licenciatura')->where('estado', 1)->value('id');
-        $gender = DB::table('genero')->value('id');
         $this->post('/alumnos/crear', ['nombre' => 'Alumno MySQL', 'apellidos' => 'Prueba temporal', 'username' => 'mysql_alumno_'.bin2hex(random_bytes(5)), 'email' => $studentEmail,
-            'password' => 'ClaveModelo!2026', 'password_confirmation' => 'ClaveModelo!2026', 'matricula' => '000123', 'licenciatura_id' => $degree, 'genero_id' => $gender])->assertRedirect();
+            'password' => 'ClaveModelo!2026', 'password_confirmation' => 'ClaveModelo!2026', 'matricula' => '000123', 'licenciatura_id' => $degree])->assertRedirect();
         $this->assertDatabaseHas('user', ['email' => $studentEmail, 'rol_id' => 3, 'status' => 10]);
         $administratorEmail = 'mysql_admin_'.bin2hex(random_bytes(5)).'@example.com';
         $this->post('/administradores', ['nombre' => 'Administrador MySQL', 'username' => 'mysql_admin_'.bin2hex(random_bytes(5)), 'email' => $administratorEmail,
@@ -67,17 +66,26 @@ class MysqlCompatibilityTest extends TestCase
     {
         $admin = User::factory()->create(['rol_id' => User::ADMIN]);
         $degree = DB::table('licenciatura')->where('estado', 1)->value('id');
-        $gender = DB::table('genero')->value('id');
-        $student = User::factory()->create(['licenciatura_id' => $degree, 'genero_id' => $gender]);
+        $student = User::factory()->create(['licenciatura_id' => $degree]);
+        $this->actingAs($student)->get('/inicio')->assertOk()->assertSee('Mi expediente')->assertDontSee('Responder encuesta de salud');
+        $this->actingAs($admin)->get('/alumnos/'.$student->id.'/expediente')->assertOk()
+            ->assertViewHas('defaults', fn($defaults) => $defaults['nombres'] === $student->nombre && $defaults['apellidos'] === $student->apellidos)
+            ->assertDontSee('datos[ocupacion]', false)->assertSee('edad-calculada');
+        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasColumn('expediente_alumno', 'ocupacion'));
         $data = [];
         foreach (array_merge(config('dossier.sections.personales'), config('dossier.sections.cuestionario')) as $field) {
             $data[$field] = preg_match('/^q[1-7]_.*(?<!detalle)$/', $field) || $field === 'q9_acomp_psicologico' ? 0 : 'Dato temporal de prueba';
         }
-        $data = array_replace($data, ['nombres' => $student->nombre, 'apellidos' => $student->apellidos, 'fecha_nacimiento' => '2000-01-02', 'genero' => 'Otro', 'estado_civil' => 'Soltero(a)',
-            'licenciatura_id' => $degree, 'apnp_tipo_sangre' => 'AB', 'apnp_factor_rh' => 'Negativo (-)', 'q10_estado_emocional' => 'Favorable', 'q11_necesita_apoyo' => ['Ninguno']]);
+        $data = array_replace($data, ['nombres' => $student->nombre, 'apellidos' => $student->apellidos, 'fecha_nacimiento' => '2000-01-02', 'estado_civil' => 'Soltero(a)',
+            'licenciatura_id' => $degree, 'telefono' => '0123456789', 'contacto_emergencia_telefono' => '9876543210', 'apnp_tipo_sangre' => 'AB', 'apnp_factor_rh' => 'Negativo (-)', 'q10_estado_emocional' => 'Favorable', 'q11_necesita_apoyo' => ['Ninguno']]);
         $this->actingAs($admin)->post('/alumnos/'.$student->id.'/expediente', ['datos' => $data, 'motivo' => 'Prueba de formulario sin antecedentes'])->assertRedirect();
         $this->assertDatabaseHas('expediente_alumno', ['user_id' => $student->id, 'apnp_tipo_sangre' => 'AB', 'apnp_factor_rh' => 'Negativo (-)', 'app_alergias' => null, 'app_cirugias_previas' => null, 'apnp_habitos_toxicos' => null]);
         $dossier = DB::table('expediente_alumno')->where('user_id', $student->id)->value('id');
         $this->get('/expedientes/'.$dossier)->assertOk()->assertSee('Tipo de Sangre')->assertSee('Factor RH')->assertDontSee('Antecedentes Personales');
+        $this->delete('/expedientes/'.$dossier, ['motivo' => 'Eliminar expediente temporal de prueba', 'version' => \App\Http\Controllers\DossierController::fingerprint(DB::table('expediente_alumno')->find($dossier))])->assertRedirect('/expedientes');
+        $this->assertDatabaseMissing('expediente_alumno', ['id' => $dossier]);
+        $this->assertDatabaseMissing('expediente_historial', ['expediente_id' => $dossier]);
+        $this->assertDatabaseHas('user', ['id' => $student->id, 'status' => 10]);
+        $this->assertDatabaseHas('auditoria_sistema', ['alumno_id' => $student->id, 'evento' => 'ELIMINACION_EXPEDIENTE']);
     }
 }

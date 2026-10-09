@@ -1,606 +1,123 @@
 @extends('layout')
-
+@section('title', 'Completar mi expediente · Escuela Modelo')
 @section('content')
-
-<style>
-    .expediente-page {
-        --azul: #174a8b;
-        --azul-oscuro: #103665;
-        --azul-claro: #eaf2fc;
-        --borde: #d9e4f1;
-        --texto: #24364b;
-        --muted: #64748b;
-        color: var(--texto);
-        padding: 24px 0 40px;
-    }
-
-    .expediente-page .exp-header {
-        position: relative;
-        overflow: hidden;
-        background: linear-gradient(120deg, #103665, #2164ac);
-        color: #fff;
-        padding: 30px;
-        border-radius: 18px;
-        margin-bottom: 25px;
-        box-shadow: 0 8px 24px rgba(23, 74, 139, .14);
-    }
-
-    .exp-header h1 {
-        font-size: clamp(1.5rem, 3vw, 2rem);
-        font-weight: 750;
-        margin: 0 0 8px;
-        letter-spacing: -.5px;
-    }
-
-    .exp-header p {
-        margin: 0;
-        color: #e0ecfb;
-        font-size: .95rem;
-    }
-
-    .exp-header .header-icon {
-        width: 58px;
-        height: 58px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 15px;
-        background: rgba(255,255,255,.14);
-        border: 1px solid rgba(255,255,255,.25);
-        font-size: 28px;
-        flex-shrink: 0;
-    }
-
-    .exp-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        background: rgba(255,255,255,.13);
-        border: 1px solid rgba(255,255,255,.23);
-        padding: 8px 12px;
-        border-radius: 30px;
-        font-size: .8rem;
-        margin-top: 18px;
-    }
-
-    .exp-card {
-        background: #fff;
-        border: 1px solid var(--borde);
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 5px 20px rgba(30, 64, 110, .05);
-    }
-
-    .exp-card-heading {
-        padding: 20px 25px;
-        border-bottom: 1px solid var(--borde);
-        background: #fbfdff;
-    }
-
-    .exp-card-heading h2 {
-        color: var(--azul-oscuro);
-        font-size: 1.1rem;
-        font-weight: 700;
-        margin: 0 0 5px;
-    }
-
-    .exp-card-heading p {
-        color: var(--muted);
-        font-size: .87rem;
-        margin: 0;
-    }
-
-    .exp-card-body {
-        padding: 25px;
-    }
-
-    .expediente-page fieldset {
-        border: 0;
-        padding: 0;
-        margin: 0;
-        min-width: 0;
-    }
-
-    .expediente-page fieldset legend {
-        width: 100%;
-        float: none;
-        color: var(--azul);
-        font-size: 1.05rem;
-        font-weight: 750;
-        padding: 0 0 13px;
-        margin-bottom: 23px;
-        border-bottom: 2px solid var(--azul-claro);
-    }
-
-    .expediente-page .form-label {
-        display: block;
-        font-size: .9rem;
-        font-weight: 650;
-        color: #334963;
-        margin-bottom: 8px;
-    }
-
-    .expediente-page .form-control,
-    .expediente-page .form-select {
-        width: 100%;
-        min-height: 45px;
-        border: 1px solid #cedbea;
-        border-radius: 9px;
-        padding: 10px 13px;
-        color: #24364b;
-        background-color: #fff;
-        transition: border-color .2s, box-shadow .2s;
-    }
-
-    .expediente-page textarea.form-control {
-        min-height: 100px;
-        resize: vertical;
-    }
-
-    .expediente-page .form-control:focus,
-    .expediente-page .form-select:focus {
-        border-color: #377ac5;
-        box-shadow: 0 0 0 3px rgba(55, 122, 197, .13);
-        outline: none;
-    }
-
-    .expediente-page .form-check-custom {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 14px;
-        margin: 8px 0;
-        border: 1px solid var(--borde);
-        border-radius: 9px;
-        background: #fff;
-        cursor: pointer;
-        transition: background .2s, border-color .2s;
-    }
-
-    .expediente-page .form-check-custom:hover {
-        background: #f3f7fd;
-        border-color: #8bb2df;
-    }
-
-    .expediente-page .form-check-custom input {
-        width: 17px;
-        height: 17px;
-        accent-color: var(--azul);
-    }
-
-    .expediente-page .btn-primary {
-        background: var(--azul);
-        border-color: var(--azul);
-    }
-
-    .expediente-page .btn-primary:hover {
-        background: var(--azul-oscuro);
-        border-color: var(--azul-oscuro);
-    }
-
-    .expediente-page .btn {
-        min-height: 42px;
-        border-radius: 9px;
-        font-weight: 650;
-        padding: 10px 18px;
-    }
-
-    .expediente-page .btn-outline-primary {
-        color: var(--azul);
-        border-color: #b7cce5;
-        background: #fff;
-    }
-
-    .expediente-page .btn-outline-primary:hover {
-        color: #fff;
-        background: var(--azul);
-        border-color: var(--azul);
-    }
-
-    .exp-progress {
-        display: flex;
-        gap: 8px;
-        margin: 18px 0 0;
-    }
-
-    .exp-progress span {
-        height: 5px;
-        flex: 1;
-        background: #dce6f2;
-        border-radius: 10px;
-        transition: background .2s;
-    }
-
-    .exp-progress span.active {
-        background: #fff;
-    }
-
-    .exp-progress span.completed {
-        background: #8fc0ff;
-    }
-
-    .exp-step-label {
-        color: var(--muted);
-        font-size: .84rem;
-        margin-top: 10px;
-    }
-
-    .exp-footer {
-        padding: 20px 25px;
-        background: #fbfdff;
-        border-top: 1px solid var(--borde);
-    }
-
-    .exp-required-note {
-        color: var(--muted);
-        font-size: .82rem;
-    }
-
-    .expediente-page [hidden] {
-        display: none !important;
-    }
-
-    @media (max-width: 576px) {
-        .expediente-page {
-            padding-top: 12px;
-        }
-
-        .expediente-page .exp-header {
-            padding: 22px 18px;
-            border-radius: 13px;
-        }
-
-        .exp-card-body {
-            padding: 20px 17px;
-        }
-
-        .exp-card-heading,
-        .exp-footer {
-            padding: 18px 17px;
-        }
-    }
-</style>
-
-<div class="container expediente-page">
-
-    <div class="exp-header">
-        <div class="d-flex align-items-start gap-3">
-            <div class="header-icon" aria-hidden="true">🎓</div>
-
-            <div class="flex-grow-1">
-                <h1>{{ $record ? 'Editar expediente' : 'Expediente estudiantil' }}</h1>
-
-                <p>
-                    {{ $record
-                        ? 'Actualiza la información del expediente del estudiante.'
-                        : 'Completa la información solicitada para registrar el expediente.' }}
-                </p>
-
-                <div class="exp-badge">
-                    <span>●</span>
-                    Sistema integral de tutorías
-                </div>
-            </div>
-        </div>
-
-        <div class="exp-progress" id="exp-progress" aria-hidden="true">
-            @foreach($sections as $section => $fields)
-                <span></span>
-            @endforeach
-        </div>
-
-        <div class="exp-step-label" id="exp-step-label" aria-live="polite">
-            Información del expediente
-        </div>
-    </div>
-
-    @if ($errors->any())
-        <div class="alert alert-danger mb-4" role="alert">
-            <strong>Revisa la información ingresada.</strong>
-            <ul class="mb-0 mt-2">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    <form method="post" class="exp-card" id="expediente-form">
+<link rel="stylesheet" href="{{ asset('css/dossier-wizard.css') }}">
+<div class="dossier-wizard">
+    <header class="wizard-intro">
+        <span class="wizard-eyebrow">EXPEDIENTE ESTUDIANTIL</span>
+        <h1>{{ $record ? 'Actualiza tu información' : 'Vamos a completar tu expediente' }}</h1>
+        <p>Responde con calma. Primero revisa tus datos, después cuéntanos sobre tu salud y bienestar.</p>
+        <span class="wizard-privacy"><x-icon name="folder"/>Tu información está protegida según la política de privacidad.</span>
+    </header>
+    <form method="post" id="expediente-form" class="wizard-form">
         @csrf
-
-        <input
-            type="hidden"
-            name="version"
-            value="{{ \App\Http\Controllers\DossierController::fingerprint($record) }}"
-        >
-
-        <div class="exp-card-heading">
-            <h2 id="exp-section-title">Información general</h2>
-            <p>Ingresa los datos con atención. Los cambios deben guardarse al finalizar.</p>
-        </div>
-
-        <div class="exp-card-body">
-
+        <input type="hidden" name="version" value="{{ \App\Http\Controllers\DossierController::fingerprint($record) }}">
+        <nav class="wizard-steps" aria-label="Pasos del expediente" hidden>
             @foreach($sections as $section => $fields)
-                <fieldset class="exp-section mb-4"
-                          data-section="{{ config('dossier.section_labels.'.$section, ucfirst(str_replace('_', ' ', $section))) }}">
-
-                    <legend>{{ config('dossier.section_labels.'.$section, ucfirst(str_replace('_', ' ', $section))) }}</legend>
-
-                    @foreach($fields as $field)
-                        @php($value = old('datos.'.$field, $record?->$field))
-
-                        <div class="mb-4">
-                            <label for="{{ $field }}" class="form-label">
-                                {{ config('dossier.labels.'.$field, ucfirst(str_replace('_', ' ', $field))) }}
-                            </label>
-
-                            @if(preg_match('/^q[1-7]_.*(?<!detalle)$/', $field) || $field === 'q9_acomp_psicologico')
-
-                                <select class="form-select"
-                                        name="datos[{{ $field }}]"
-                                        id="{{ $field }}"
-                                        required>
-                                    <option value="0" @selected((string)$value === '0')>No</option>
-                                    <option value="1" @selected((string)$value === '1')>Sí</option>
-                                </select>
-
-                            @elseif($field === 'q11_necesita_apoyo')
-
-                                @php($supports = is_array($value) ? $value : (json_decode($value ?: '[]', true) ?: []))
-
-                                @foreach(['Psicológico', 'De aprendizaje', 'Otro', 'Ninguno'] as $choice)
-                                    <label class="form-check-custom">
-                                        <input
-                                            type="checkbox"
-                                            name="datos[{{ $field }}][]"
-                                            value="{{ $choice }}"
-                                            @checked(in_array($choice, $supports, true))
-                                        >
-                                        <span>{{ $choice }}</span>
-                                    </label>
-                                @endforeach
-
-                            @elseif($field === 'licenciatura_id')
-
-                                <select class="form-select"
-                                        name="datos[{{ $field }}]"
-                                        id="{{ $field }}"
-                                        required>
-                                    <option value="">Selecciona una licenciatura</option>
-
-                                    @foreach($licenciaturas as $l)
-                                        <option value="{{ $l->id }}"
-                                                @selected((string)$value === (string)$l->id)>
-                                            {{ $l->nombre }}
-                                        </option>
-                                    @endforeach
-                                </select>
-
-                            @elseif(in_array($field, [
-                                'genero',
-                                'estado_civil',
-                                'apnp_tipo_sangre',
-                                'apnp_factor_rh',
-                                'q10_estado_emocional'
-                            ]))
-
-                                @php($options = [
-                                    'genero' => ['Masculino', 'Femenino', 'Otro'],
-                                    'estado_civil' => ['Soltero(a)', 'Casado(a)', 'Unión Libre', 'Otro'],
-                                    'apnp_tipo_sangre' => ['O', 'A', 'B', 'AB'],
-                                    'apnp_factor_rh' => ['Positivo (+)', 'Negativo (-)'],
-                                    'q10_estado_emocional' => ['Muy desfavorable', 'Desfavorable', 'Favorable', 'Muy favorable']
-                                ][$field])
-
-                                <select class="form-select"
-                                        name="datos[{{ $field }}]"
-                                        id="{{ $field }}"
-                                        required>
-                                    <option value="">Selecciona una opción</option>
-
-                                    @foreach($options as $option)
-                                        <option value="{{ $option }}"
-                                                @selected((string)$value === (string)$option)>
-                                            {{ $option }}
-                                        </option>
-                                    @endforeach
-                                </select>
-
-                            @elseif($field === 'fecha_nacimiento')
-
-                                <input
-                                    class="form-control"
-                                    name="datos[{{ $field }}]"
-                                    id="{{ $field }}"
-                                    type="date"
-                                    value="{{ $value }}"
-                                    required
-                                    max="{{ date('Y-m-d') }}"
-                                >
-
-                            @else
-
-                                <textarea
-                                    class="form-control"
-                                    name="datos[{{ $field }}]"
-                                    id="{{ $field }}"
-                                >{{ $value }}</textarea>
-
-                            @endif
-                        </div>
-                    @endforeach
-                </fieldset>
+            <button type="button" data-go-step="{{ $loop->index }}"><span>{{ $loop->iteration }}</span>{{ $section === 'personales' ? 'Tus datos' : 'Salud y bienestar' }}</button>
             @endforeach
-
-            @if(auth()->user()->rol_id !== 3)
-                <div class="mb-4">
-                    <label for="motivo" class="form-label">
-                        Motivo de la actualización
-                    </label>
-
-                    <textarea
-                        name="motivo"
-                        id="motivo"
-                        class="form-control"
-                        required
-                        maxlength="2000"
-                        placeholder="Describe brevemente el motivo de la actualización..."
-                    >{{ old('motivo') }}</textarea>
+            <button type="button" data-go-step="{{ count($sections) }}"><span>{{ count($sections) + 1 }}</span>Revisar y guardar</button>
+        </nav>
+        <div class="wizard-status"><span id="wizard-step-label" role="status">Completa los campos obligatorios</span><span id="wizard-save-status">Los cambios se guardan al finalizar</span></div>
+        @foreach($sections as $section => $fields)
+        <fieldset class="wizard-panel" data-step-title="{{ $section === 'personales' ? 'Tus datos' : 'Salud y bienestar' }}">
+            <legend>{{ config('dossier.section_labels.'.$section) }}</legend>
+            <p class="wizard-panel-help">{{ $section === 'personales' ? 'Tu nombre ya está precargado. Revisa tus datos y agrega un contacto de emergencia.' : 'Elige una respuesta en cada pregunta. Si eliges Sí, te pediremos un breve detalle.' }} <strong>* Obligatorio</strong></p>
+            <div class="{{ $section === 'personales' ? 'wizard-fields' : 'wizard-questions' }}">
+            @foreach($fields as $field)
+                @if(str_ends_with($field, '_detalle') || $field === 'q11_necesita_apoyo_otro') @continue @endif
+                @if($field === 'contacto_emergencia_nombre')
+                <div class="wizard-emergency wide-field" role="group" aria-labelledby="emergency-contact-title">
+                    <h2 id="emergency-contact-title">DATOS DE CONTACTO DE EMERGENCIA</h2>
+                    <div class="wizard-fields">
+                @endif
+                @php
+                    $value = old('datos.'.$field, $record?->$field ?? ($defaults[$field] ?? null));
+                    $binary = preg_match('/^q[1-7]_.*(?<!detalle)$/', $field) || $field === 'q9_acomp_psicologico';
+                    $required = !in_array($field, ['q12_info_adicional']);
+                    $label = $section === 'cuestionario' ? config('dossier_questions.'.$field) : config('dossier.labels.'.$field);
+                @endphp
+                <div class="wizard-field {{ $section === 'cuestionario' ? 'question-card' : '' }} {{ $field === 'domicilio' ? 'wide-field' : '' }}" data-review-field="{{ $field }}" data-review-label="{{ $label }}">
+                    @if($section === 'cuestionario')<span class="question-number">Pregunta {{ (int) preg_replace('/^q(\d+).*/', '$1', $field) }}</span>@endif
+                    @if($binary || in_array($field, ['q10_estado_emocional', 'q11_necesita_apoyo']))
+                        <h2 id="label-{{ $field }}" class="question-label">{{ $label }} <span aria-label="obligatorio">*</span></h2>
+                    @else
+                        <label class="question-label" for="{{ $field }}">{{ $label }} @if($required)<span aria-label="obligatorio">*</span>@else<small>Opcional</small>@endif</label>
+                    @endif
+                    @if($binary)
+                        <div class="answer-choices" role="group" aria-labelledby="label-{{ $field }}">
+                        @foreach(['1' => 'Sí', '0' => 'No'] as $answer => $text)
+                            <label class="answer-choice"><input type="radio" name="datos[{{ $field }}]" id="{{ $field }}-{{ $answer }}" value="{{ $answer }}" @checked($value !== null && (string)$value === (string)$answer) required><span>{{ $text }}</span></label>
+                        @endforeach
+                        </div>
+                        @if($field !== 'q9_acomp_psicologico')
+                            @php($detail = $field.'_detalle')
+                            <div class="question-detail" data-detail-for="{{ $field }}">
+                                <label for="{{ $detail }}">{{ config('dossier.labels.'.$detail) }} <span>*</span></label>
+                                <textarea class="form-control" id="{{ $detail }}" name="datos[{{ $detail }}]" rows="3" maxlength="10000" placeholder="Escribe un breve detalle…">{{ old('datos.'.$detail, $record?->$detail) }}</textarea>
+                                @error($detail)<p class="field-error">{{ $message }}</p>@enderror
+                            </div>
+                        @endif
+                    @elseif($field === 'q10_estado_emocional')
+                        <p class="field-help">Elige la opción que mejor describa cómo te sientes.</p>
+                        <div class="answer-choices emotional-choices" role="group" aria-labelledby="label-{{ $field }}">
+                        @foreach(['Muy desfavorable', 'Desfavorable', 'Favorable', 'Muy favorable'] as $choice)
+                            <label class="answer-choice"><input type="radio" name="datos[{{ $field }}]" value="{{ $choice }}" @checked($value === $choice) required><span>{{ $choice }}</span></label>
+                        @endforeach
+                        </div>
+                    @elseif($field === 'q11_necesita_apoyo')
+                        @php($supports = is_array($value) ? $value : (json_decode($value ?: '[]', true) ?: []))
+                        <p class="field-help">Puedes elegir más de uno. Si no necesitas apoyo, elige Ninguno.</p>
+                        <div class="answer-choices support-choices" role="group" aria-labelledby="label-{{ $field }}">
+                        @foreach(['Psicológico', 'De aprendizaje', 'Otro', 'Ninguno'] as $choice)
+                            <label class="answer-choice"><input type="checkbox" name="datos[{{ $field }}][]" value="{{ $choice }}" @checked(in_array($choice, $supports, true))><span>{{ $choice }}</span></label>
+                        @endforeach
+                        </div>
+                        <div class="question-detail" data-support-detail>
+                            <label for="q11_necesita_apoyo_otro">¿Qué otro apoyo necesitas? <span>*</span></label>
+                            <textarea id="q11_necesita_apoyo_otro" class="form-control" name="datos[q11_necesita_apoyo_otro]" rows="3">{{ old('datos.q11_necesita_apoyo_otro', $record?->q11_necesita_apoyo_otro) }}</textarea>
+                            @error('q11_necesita_apoyo_otro')<p class="field-error">{{ $message }}</p>@enderror
+                        </div>
+                    @elseif(in_array($field, ['nombres', 'apellidos', 'contacto_emergencia_nombre']))
+                        <input class="form-control" id="{{ $field }}" name="datos[{{ $field }}]" value="{{ $value }}" maxlength="255" required autocomplete="{{ ['nombres'=>'given-name','apellidos'=>'family-name'][$field] ?? 'off' }}">
+                    @elseif(in_array($field, ['telefono', 'contacto_emergencia_telefono']))
+                        <input class="form-control" id="{{ $field }}" name="datos[{{ $field }}]" type="tel" inputmode="numeric" value="{{ $value }}" pattern="[0-9]{10}" minlength="10" maxlength="10" title="Escribe exactamente 10 dígitos, sin espacios ni guiones" required>
+                        <p class="field-help">10 dígitos, sin espacios ni guiones.</p>
+                    @elseif($field === 'fecha_nacimiento')
+                        <input class="form-control" id="{{ $field }}" name="datos[{{ $field }}]" type="date" value="{{ $value }}" max="{{ now()->toDateString() }}" required>
+                        <label class="field-help" for="edad-calculada">Edad calculada</label><input class="form-control age-output" id="edad-calculada" readonly placeholder="Años cumplidos">
+                    @elseif($field === 'licenciatura_id')
+                        <select class="form-select" id="{{ $field }}" name="datos[{{ $field }}]" required><option value="">Selecciona tu licenciatura</option>@foreach($licenciaturas as $degree)<option value="{{ $degree->id }}" @selected((string)$value === (string)$degree->id)>{{ $degree->nombre }}</option>@endforeach</select>
+                    @elseif(in_array($field, ['estado_civil', 'apnp_tipo_sangre', 'apnp_factor_rh']))
+                        @php($options = ['estado_civil'=>['Soltero(a)','Casado(a)','Unión Libre','Otro'],'apnp_tipo_sangre'=>['O','A','B','AB'],'apnp_factor_rh'=>['Positivo (+)','Negativo (-)']][$field])
+                        <select class="form-select" id="{{ $field }}" name="datos[{{ $field }}]" required><option value="">Selecciona una opción</option>@foreach($options as $choice)<option value="{{ $choice }}" @selected($value === $choice)>{{ $choice }}</option>@endforeach</select>
+                    @else
+                        @if($field === 'q8_red_apoyo')<p class="field-help">Puede ser tu familia, amistades, pareja o comunidad. Si no cuentas con una red, puedes indicarlo.</p>@endif
+                        <textarea class="form-control" id="{{ $field }}" name="datos[{{ $field }}]" rows="{{ $section === 'cuestionario' ? 3 : 2 }}" maxlength="10000" @required($required)>{{ $value }}</textarea>
+                    @endif
+                    @error($field)<p class="field-error" role="alert">{{ $message }}</p>@enderror
                 </div>
-            @endif
-
-        </div>
-
-        <div class="exp-footer">
-
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-
-                <div class="exp-required-note">
-                    Verifica los datos antes de guardar.
+                @if($field === 'contacto_emergencia_telefono')
+                    </div>
                 </div>
-
-                <div class="d-flex flex-wrap gap-2"
-                     id="pasos-expediente"
-                     hidden>
-
-                    <button class="btn btn-outline-primary"
-                            type="button"
-                            id="paso-anterior">
-                        ← Anterior
-                    </button>
-
-                    <button class="btn btn-primary"
-                            type="button"
-                            id="paso-siguiente">
-                        Siguiente →
-                    </button>
-
-                    <span id="paso-actual"
-                          class="visually-hidden"
-                          role="status"
-                          aria-live="polite"></span>
-                </div>
-
-                <button class="btn btn-primary"
-                        id="guardar-expediente"
-                        type="submit">
-                    ✓ Guardar expediente
-                </button>
-
+                @endif
+            @endforeach
             </div>
-        </div>
-
+        </fieldset>
+        @endforeach
+        <section class="wizard-panel wizard-review" data-step-title="Revisar y guardar" hidden>
+            <h2>Una última revisión</h2><p>Revisa tus respuestas. Puedes volver a cualquier paso y corregirlas antes de guardar.</p>
+            <div id="wizard-review-content"></div>
+        </section>
+        @if(auth()->user()->rol_id !== 3)
+        <div class="wizard-reason"><label for="motivo">Motivo de la actualización *</label><textarea class="form-control" id="motivo" name="motivo" rows="2" required maxlength="2000">{{ old('motivo') }}</textarea></div>
+        @endif
+        <footer class="wizard-footer">
+            <p id="wizard-footer-note">Tu expediente se guarda al finalizar.</p>
+            <div><button id="wizard-back" class="btn btn-outline-primary" type="button" hidden>Anterior</button><button id="wizard-next" class="btn btn-primary" type="button" hidden>Continuar</button><button id="guardar-expediente" class="btn btn-primary" type="submit">Guardar expediente</button></div>
+        </footer>
     </form>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const form = document.getElementById('expediente-form');
-
-    if (!form) return;
-
-    const steps = Array.from(form.querySelectorAll('.exp-section'));
-    const progress = Array.from(document.querySelectorAll('#exp-progress span'));
-    const progressLabel = document.getElementById('exp-step-label');
-    const sectionTitle = document.getElementById('exp-section-title');
-
-    const navigation = document.getElementById('pasos-expediente');
-    const previousButton = document.getElementById('paso-anterior');
-    const nextButton = document.getElementById('paso-siguiente');
-    const saveButton = document.getElementById('guardar-expediente');
-    const currentLabel = document.getElementById('paso-actual');
-
-    let activeStep = 0;
-
-    function showStep(index) {
-        if (!steps.length) return;
-
-        activeStep = Math.max(0, Math.min(index, steps.length - 1));
-
-        steps.forEach((step, i) => {
-            step.hidden = i !== activeStep;
-        });
-
-        progress.forEach((bar, i) => {
-            bar.classList.toggle('active', i === activeStep);
-            bar.classList.toggle('completed', i < activeStep);
-        });
-
-        previousButton.disabled = activeStep === 0;
-        nextButton.hidden = activeStep === steps.length - 1;
-        saveButton.hidden = activeStep !== steps.length - 1;
-
-        const title = steps[activeStep].dataset.section || 'Información general';
-
-        sectionTitle.textContent = title;
-        progressLabel.textContent =
-            'Sección ' + (activeStep + 1) + ' de ' + steps.length;
-
-        currentLabel.textContent =
-            'Paso ' + (activeStep + 1) + ' de ' + steps.length;
-    }
-
-    function validateCurrentStep() {
-        const controls = Array.from(
-            steps[activeStep].querySelectorAll('input, select, textarea')
-        ).filter(control =>
-            !control.disabled &&
-            control.type !== 'hidden' &&
-            control.name !== 'motivo'
-        );
-
-        for (const control of controls) {
-            if (!control.checkValidity()) {
-                control.reportValidity();
-                control.focus();
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    if (steps.length > 1) {
-        navigation.hidden = false;
-
-        previousButton.addEventListener('click', function () {
-            showStep(activeStep - 1);
-        });
-
-        nextButton.addEventListener('click', function () {
-            if (validateCurrentStep()) {
-                showStep(activeStep + 1);
-                sectionTitle.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                });
-            }
-        });
-
-        form.addEventListener('invalid', function (event) {
-            const index = steps.findIndex(step =>
-                step.contains(event.target)
-            );
-
-            if (index >= 0 && index !== activeStep) {
-                showStep(index);
-            }
-        }, true);
-
-        form.addEventListener('submit', function (event) {
-            if (!validateCurrentStep()) {
-                event.preventDefault();
-            }
-        });
-
-        showStep(0);
-    } else if (steps.length === 1) {
-        showStep(0);
-    } else {
-        navigation.hidden = true;
-    }
-});
-</script>
-
+<script src="{{ asset('js/dossier-age.js') }}"></script>
+<script src="{{ asset('js/dossier-wizard.js') }}"></script>
 @endsection

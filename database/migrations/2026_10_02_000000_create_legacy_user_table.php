@@ -27,7 +27,6 @@ return new class extends Migration
             $table->string('password_reset_token')->nullable();
             $table->unsignedInteger('licenciatura_id')->nullable();
             $table->unsignedInteger('grupo_id')->nullable();
-            $table->unsignedInteger('genero_id')->nullable();
             $table->timestamps();
         });
     }

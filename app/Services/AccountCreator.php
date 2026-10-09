@@ -45,7 +45,7 @@ class AccountCreator
             $user = new User;
             $fields = ['nombre', 'apellidos', 'username', 'email'];
             if ($role === User::ALUMNO) {
-                $fields = array_merge($fields, ['matricula', 'licenciatura_id', 'genero_id', 'grupo_id']);
+                $fields = array_merge($fields, ['matricula', 'licenciatura_id', 'grupo_id']);
             }
             $user->fill(collect($data)->only($fields)->all());
             $user->rol_id = $role;

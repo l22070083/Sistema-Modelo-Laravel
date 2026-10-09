@@ -24,14 +24,14 @@ class RegistrationController extends Controller
 
     public static function catalogs(): array
     {
-        return ['licenciaturas' => DB::table('licenciatura')->where('estado', 1)->get(), 'generos' => DB::table('genero')->get(), 'grupos' => DB::table('grupo')->where('estado', 1)->get()];
+        return ['licenciaturas' => DB::table('licenciatura')->where('estado', 1)->get(), 'grupos' => DB::table('grupo')->where('estado', 1)->get()];
     }
 
     public static function profileRules(): array
     {
         return ['matricula' => ['required', 'string', 'max:50', 'regex:/^[0-9]+$/D'],
             'licenciatura_id' => ['required', 'integer', Rule::exists('licenciatura', 'id')->where('estado', 1)],
-            'genero_id' => ['required', 'integer', 'exists:genero,id'], 'grupo_id' => ['nullable', 'integer', Rule::exists('grupo', 'id')->where('estado', 1)->where('licenciatura_id', request('licenciatura_id'))]];
+            'grupo_id' => ['nullable', 'integer', Rule::exists('grupo', 'id')->where('estado', 1)->where('licenciatura_id', request('licenciatura_id'))]];
     }
 
     public function register(Request $request): RedirectResponse

@@ -176,31 +176,6 @@
         font-size: 12px;
     }
 
-    .risk-badge {
-        display: inline-block;
-        border-radius: 20px;
-        padding: 4px 10px;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .3px;
-    }
-
-    .risk-low {
-        background: #e8f7ee;
-        color: #157347;
-    }
-
-    .risk-medium {
-        background: #fff4d6;
-        color: #946c00;
-    }
-
-    .risk-high {
-        background: #fdeaea;
-        color: #b02a37;
-    }
-
     .info-box {
         background: var(--survey-blue-light);
         border: 1px solid #cbdcf5;
@@ -265,6 +240,7 @@
 @foreach($surveys->prepend(null) as $survey)
 
     <form
+        id="{{ $survey ? 'encuesta-'.$survey->id : 'nueva-encuesta' }}"
         class="survey-card"
         action="{{ $survey ? route('encuesta.save', $survey->id) : route('encuesta.save') }}"
         method="post"
@@ -367,15 +343,10 @@
     </span>
 </div>
 
-<div class="info-box">
-    <strong>Clasificación de riesgo:</strong>
-    cada pregunta puede asociarse a un nivel de riesgo
-    <strong>bajo, medio o alto</strong>, de acuerdo con la valoración institucional.
-</div>
-
 @foreach($questions->prepend(null) as $question)
 
     <form
+        id="{{ $question ? 'pregunta-'.$question->id : 'nueva-pregunta' }}"
         class="survey-card"
         action="{{ $question ? route('pregunta.save', $question->id) : route('pregunta.save') }}"
         method="post"
@@ -397,7 +368,7 @@
             <div class="row g-3">
 
                 {{-- Encuesta --}}
-                <div class="col-md-7">
+                <div class="col-12">
                     <div class="form-group">
                         <label
                             class="form-label-custom"
@@ -418,33 +389,6 @@
                                     @selected($question?->encuesta_id == $s->id)
                                 >
                                     {{ $s->titulo }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-
-                {{-- Riesgo --}}
-                <div class="col-md-5">
-                    <div class="form-group">
-                        <label
-                            class="form-label-custom"
-                            for="riesgo-{{ $question?->id ?? 'nueva' }}"
-                        >
-                            Nivel de riesgo
-                        </label>
-
-                        <select
-                            id="riesgo-{{ $question?->id ?? 'nueva' }}"
-                            class="form-select"
-                            name="tipo_riesgo"
-                        >
-                            @foreach(['bajo','medio','alto'] as $risk)
-                                <option
-                                    value="{{ $risk }}"
-                                    @selected($question?->tipo_riesgo === $risk)
-                                >
-                                    {{ ucfirst($risk) }}
                                 </option>
                             @endforeach
                         </select>
@@ -472,7 +416,7 @@
                 </div>
 
                 {{-- Estado --}}
-                <div class="col-md-6">
+                <div class="col-12">
                     <div class="form-group">
                         <label
                             class="form-label-custom"
@@ -494,15 +438,6 @@
                                 Inactiva
                             </option>
                         </select>
-                    </div>
-                </div>
-
-                {{-- Indicador visual de riesgo --}}
-                <div class="col-md-6 d-flex align-items-end">
-                    <div class="mb-3">
-                        <span class="risk-badge risk-low me-1">Bajo</span>
-                        <span class="risk-badge risk-medium me-1">Medio</span>
-                        <span class="risk-badge risk-high">Alto</span>
                     </div>
                 </div>
 

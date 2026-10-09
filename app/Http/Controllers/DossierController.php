@@ -28,9 +28,6 @@ class DossierController extends Controller
         }
         SectionAccess::require('personales');
         $query = DB::table('expediente_alumno as e')->leftJoin('licenciatura as l', 'e.licenciatura_id', '=', 'l.id')->select('e.id', 'e.user_id', 'e.nombres', 'e.apellidos', 'e.archivado_at', 'l.nombre as licenciatura');
-        if (SectionAccess::can('clasificacion')) {
-            $query->addSelect('e.categoria_atencion', 'e.categoria_manual', 'e.atencion_prioritaria');
-        }
         if ($request->filled('q')) {
             $query->where(function ($q) use ($request): void {
                 $q->where('e.nombres', 'like', '%'.$request->query('q').'%')->orWhere('e.apellidos', 'like', '%'.$request->query('q').'%');
@@ -85,14 +82,12 @@ class DossierController extends Controller
         $revisions = $own && $record ? DB::table('expediente_historial')->where('expediente_id', $record->id)->orderByDesc('fecha')->limit(5)->get(['accion', 'fecha']) : $history;
         $student = $record && isset($sections['personales']) ? User::find($record->user_id) : null;
         $degree = $student ? DB::table('licenciatura')->where('id', $record->licenciatura_id)->value('nombre') : null;
-        $categories = $record && ($own || isset($sections['clasificacion'])) ? DossierRules::categories($record->categoria_manual ?: $record->categoria_atencion) : [];
-
-        return view('expediente', compact('record', 'sections', 'history', 'revisions', 'student', 'degree', 'categories', 'own'));
+        return view('expediente', compact('record', 'sections', 'history', 'revisions', 'student', 'degree', 'own'));
     }
 
     public function edit(Request $request, ?int $id = null): View|RedirectResponse
     {
-        if ($request->user()->rol_id === 3 && (! $request->user()->matricula || ! $request->user()->licenciatura_id || ! $request->user()->genero_id)) {
+        if ($request->user()->rol_id === 3 && (! $request->user()->matricula || ! $request->user()->licenciatura_id)) {
             return redirect()->route('perfil')->with('error', 'Completa tu perfil antes de llenar el expediente.');
         }
         $creatingFor = $request->attributes->get('dossier_student');
@@ -124,13 +119,6 @@ class DossierController extends Controller
                 if (isset($values['fecha_nacimiento'])) {
                     $values['edad'] = (int) Carbon::parse($values['fecha_nacimiento'])->diffInYears(now());
                 }
-                if (array_intersect(array_keys($values), config('dossier.sections.cuestionario'))) {
-                    $classification = DossierRules::classify(array_merge((array) $current, $values));
-                    if ($current && $current->categoria_manual) {
-                        unset($classification['atencion_prioritaria']);
-                    }
-                    $values = array_merge($values, $classification);
-                }
                 $values['updated_at'] = now();
                 $values['ultimo_editor_id'] = $request->user()->id;
                 if ($current) {
@@ -147,7 +135,10 @@ class DossierController extends Controller
             return redirect()->route($request->user()->rol_id === 3 ? 'mi-expediente' : 'expediente.ver', $request->user()->rol_id === 3 ? [] : $savedId)->with('success', 'Expediente e historial guardados.');
         }
 
-        return view('expediente-form', ['record' => $record, 'sections' => $sections, 'licenciaturas' => DB::table('licenciatura')->get()]);
+        $studentAccount = User::find($record?->user_id ?? ($creatingFor ?: $request->user()->id));
+        $defaults = ['nombres' => $studentAccount?->nombre, 'apellidos' => $studentAccount?->apellidos];
+
+        return view('expediente-form', ['record' => $record, 'sections' => $sections, 'defaults' => $defaults, 'licenciaturas' => DB::table('licenciatura')->get()]);
     }
 
     public function create(Request $request, int $student): View|RedirectResponse
@@ -182,6 +173,28 @@ class DossierController extends Controller
         return response($pdf->output(), 200, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'attachment; filename="expediente-'.$record->id.'.pdf"']);
     }
 
+    public function destroy(Request $request, int $id): RedirectResponse
+    {
+        abort_unless($request->user()->rol_id === User::ADMIN, 403);
+        $request->validate(['motivo' => 'required|string|max:2000', 'version' => 'required|string|max:128']);
+        $target = DB::table('expediente_alumno')->find($id);
+        abort_unless($target, 404);
+
+        DB::transaction(function () use ($request, $id, $target): void {
+            // Use the same lock order as dossier editing to protect concurrent saves.
+            DB::table('user')->where('id', $target->user_id)->lockForUpdate()->first();
+            $record = DB::table('expediente_alumno')->where('id', $id)->lockForUpdate()->first();
+            abort_unless($record, 404);
+            abort_if(self::fingerprint($record) !== $request->input('version'), 409, 'El expediente cambió; recarga y revísalo antes de eliminarlo.');
+            $revisions = DB::table('expediente_historial')->where('expediente_id', $id)->count();
+            Audit::record('ELIMINACION_EXPEDIENTE', $request->input('motivo'), ['expediente_id' => $id, 'revisiones_eliminadas' => $revisions], $record->user_id);
+            DB::table('expediente_historial')->where('expediente_id', $id)->delete();
+            DB::table('expediente_alumno')->where('id', $id)->delete();
+        });
+
+        return redirect()->route('expedientes')->with('success', 'Expediente eliminado. El alumno puede registrar uno nuevo.');
+    }
+
     private function history(int $id, string $action, string $reason): void
     {
         DB::table('expediente_historial')->insert(['expediente_id' => $id, 'user_id' => auth()->id(), 'accion' => $action, 'detalles' => $reason, 'fecha' => now()]);
@@ -196,8 +209,6 @@ class DossierController extends Controller
             abort_unless($request->user()->rol_id === 1, 403);
         } elseif ($action === 'nota') {
             SectionAccess::require('notas', true);
-        } elseif ($action === 'clasificar') {
-            SectionAccess::require('clasificacion', true);
         } else {
             abort(404);
         }
@@ -206,10 +217,6 @@ class DossierController extends Controller
         }
         if ($action === 'bloqueo') {
             $request->validate(['bloqueado' => 'required|boolean']);
-        }
-        if ($action === 'clasificar') {
-            $request->validate(['categorias' => 'required|array|min:1', 'categorias.*' => 'required|distinct|in:Sin dato de alarma,Atención Psicopedagógica,Salud Física,Atención Emocional', 'prioritaria' => 'sometimes|boolean']);
-            abort_if(in_array('Sin dato de alarma', $request->categorias, true) && count($request->categorias) > 1, 422);
         }
         DB::transaction(function () use ($request, $id, $action): void {
             $record = DB::table('expediente_alumno')->where('id', $id)->lockForUpdate()->first();
@@ -224,12 +231,6 @@ class DossierController extends Controller
             if ($action === 'bloqueo') {
                 $data['bloqueado'] = (int) $request->bloqueado;
             }
-            if ($action === 'clasificar') {
-                $data += ['categoria_manual' => json_encode($request->categorias, JSON_UNESCAPED_UNICODE), 'clasificado_por' => auth()->id(), 'motivo_clasificacion' => $request->motivo];
-                if ($request->has('prioritaria')) {
-                    $data['atencion_prioritaria'] = (int) $request->boolean('prioritaria');
-                }
-            }
             if ($action === 'nota') {
                 $data['notas_coordinador'] = ($record->notas_coordinador ? $record->notas_coordinador."\n---\n" : '').'['.now()->format('d/m/Y H:i').' - '.auth()->user()->nombre."]:\n".$request->nota;
             }
@@ -239,14 +240,6 @@ class DossierController extends Controller
         });
 
         return back()->with('success', 'Acción registrada en la auditoría.');
-    }
-
-    public function attention(): View
-    {
-        SectionAccess::require('personales');
-        SectionAccess::require('clasificacion');
-
-        return view('atencion', ['rows' => DB::table('expediente_alumno')->whereNull('archivado_at')->whereNotNull('categoria_atencion')->orderByDesc('atencion_prioritaria')->get()]);
     }
 
     public function certificate(Request $request, ?int $id = null): Response

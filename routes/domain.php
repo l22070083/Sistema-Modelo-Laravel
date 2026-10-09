@@ -25,12 +25,8 @@ Route::get('/microsoft/callback', [MicrosoftController::class, 'callback'])->mid
 Route::middleware(['auth', 'role:1,2,3'])->group(function () {
     Route::match(['get', 'post'], '/perfil', [RegistrationController::class, 'profile'])->name('perfil');
     Route::post('/microsoft/vincular', [MicrosoftController::class, 'begin'])->middleware('throttle:5,1')->name('microsoft.link');
-    Route::get('/resultados/{student?}', [SurveyController::class, 'results'])->name('resultados');
 });
 Route::middleware(['auth', 'role:3'])->group(function () {
-    Route::match(['get', 'post'], '/encuestas/responder/{id?}', [SurveyController::class, 'answer'])->name('encuesta.responder');
-    Route::post('/encuestas/autoguardado', [SurveyController::class, 'autosave'])->name('encuesta.autoguardado');
-    Route::get('/encuestas/{id}/finalizar', [SurveyController::class, 'finish'])->name('encuesta.finalizar');
     Route::get('/mi-expediente', [DossierController::class, 'show'])->name('mi-expediente');
     Route::match(['get', 'post'], '/mi-expediente/editar', [DossierController::class, 'edit'])->name('mi-expediente.editar');
     Route::get('/mi-constancia', [DossierController::class, 'certificate'])->name('mi-constancia');
@@ -43,21 +39,20 @@ Route::middleware(['auth', 'role:1,2'])->group(function () {
     Route::match(['get', 'post'], '/alumnos/{id}/editar', [StudentController::class, 'edit'])->name('alumno.editar');
     Route::get('/expedientes', [DossierController::class, 'index'])->name('expedientes');
     Route::get('/expedientes/{id}', [DossierController::class, 'show'])->name('expediente.ver');
+    Route::delete('/expedientes/{id}', [DossierController::class, 'destroy'])->middleware('role:1')->name('expediente.destroy');
     Route::match(['get', 'post'], '/expedientes/{id}/editar', [DossierController::class, 'edit'])->name('expediente.editar');
     Route::post('/expedientes/{id}/pdf', [DossierController::class, 'exportPdf'])->name('expediente.pdf');
-    Route::post('/expedientes/{id}/{action}', [DossierController::class, 'action'])->name('expediente.accion');
+    Route::post('/expedientes/{id}/{action}', [DossierController::class, 'action'])->where('action', 'nota|archivar|restaurar|bloqueo')->name('expediente.accion');
     Route::get('/expedientes/{id}/constancia', [DossierController::class, 'certificate'])->name('expediente.constancia');
-    Route::get('/atencion', [DossierController::class, 'attention'])->name('atencion');
     Route::get('/reportes', [ReportController::class, 'index'])->name('reportes');
     Route::post('/reportes/exportar', [ReportController::class, 'export'])->name('reportes.exportar');
-    Route::get('/alertas', [ReportController::class, 'alerts'])->name('alertas');
 });
 Route::middleware(['auth', 'role:1'])->group(function () {
     Route::match(['get', 'post'], '/alumnos/crear', [StudentController::class, 'create'])->name('alumno.create');
-    Route::get('/catalogos/{catalog}', [CatalogController::class, 'index'])->name('catalogo');
-    Route::get('/catalogos/{catalog}/{id}', [CatalogController::class, 'edit'])->name('catalogo.edit');
-    Route::post('/catalogos/{catalog}/{id?}', [CatalogController::class, 'save'])->name('catalogo.save');
-    Route::post('/catalogos/{catalog}/{id}/estado', [CatalogController::class, 'status'])->name('catalogo.status');
+    Route::get('/catalogos/{catalog}', [CatalogController::class, 'index'])->where('catalog', 'licenciatura|grupo')->name('catalogo');
+    Route::get('/catalogos/{catalog}/{id}', [CatalogController::class, 'edit'])->where('catalog', 'licenciatura|grupo')->name('catalogo.edit');
+    Route::post('/catalogos/{catalog}/{id?}', [CatalogController::class, 'save'])->where('catalog', 'licenciatura|grupo')->name('catalogo.save');
+    Route::post('/catalogos/{catalog}/{id}/estado', [CatalogController::class, 'status'])->where('catalog', 'licenciatura|grupo')->name('catalogo.status');
     Route::delete('/alumnos/{id}', [StudentController::class, 'destroy'])->name('alumno.destroy');
     Route::delete('/coordinadores/{id}', [CoordinatorController::class, 'destroy'])->name('coordinador.destroy');
     Route::post('/alumnos/{id}/estado', [StudentController::class, 'status'])->name('alumno.status');

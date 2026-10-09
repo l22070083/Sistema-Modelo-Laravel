@@ -239,8 +239,7 @@
     <h1>Exportación de reportes</h1>
 
     <p>
-        Genera reportes institucionales de alumnos, salud y atención
-        estudiantil en diferentes formatos.
+        Genera reportes institucionales de alumnos en diferentes formatos.
     </p>
 </div>
 
@@ -304,19 +303,10 @@
                         Alumnos
                     </option>
 
-                    @if(\App\Services\SectionAccess::can('clasificacion'))
-                        <option value="salud">
-                            Respuestas y alertas de salud
-                        </option>
-
-                        <option value="atencion">
-                            Atención estudiantil
-                        </option>
-                    @endif
                 </select>
 
                 <small class="field-help">
-                    Las opciones disponibles dependen de tus permisos dentro del sistema.
+                    El reporte incluye los datos generales de los alumnos.
                 </small>
 
             </div>

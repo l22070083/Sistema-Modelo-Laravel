@@ -57,9 +57,8 @@ class AdminAccountManagementTest extends TestCase
         $admin = User::factory()->create(['rol_id' => 1]);
         $student = User::factory()->create();
         $degree = DB::table('licenciatura')->insertGetId(['nombre' => 'Prueba', 'estado' => 1]);
-        $gender = DB::table('genero')->insertGetId(['nombre' => 'Otro']);
         $this->actingAs($admin)->get('/alumnos/'.$student->id.'/editar')->assertOk()->assertSee('Nueva contraseña');
-        $this->post('/alumnos/'.$student->id.'/editar', ['nombre' => 'Nombre actualizado', 'apellidos' => 'Apellido actualizado', 'username' => 'actualizado', 'email' => 'actualizado@example.test', 'matricula' => '123', 'licenciatura_id' => $degree, 'genero_id' => $gender, 'password' => 'ClaveNueva!2026', 'password_confirmation' => 'ClaveNueva!2026', 'rol_id' => 1, 'status' => -1])->assertRedirect('/alumnos/'.$student->id);
+        $this->post('/alumnos/'.$student->id.'/editar', ['nombre' => 'Nombre actualizado', 'apellidos' => 'Apellido actualizado', 'username' => 'actualizado', 'email' => 'actualizado@example.test', 'matricula' => '123', 'licenciatura_id' => $degree, 'password' => 'ClaveNueva!2026', 'password_confirmation' => 'ClaveNueva!2026', 'rol_id' => 1, 'status' => -1])->assertRedirect('/alumnos/'.$student->id);
         $student->refresh();
         $this->assertSame('actualizado', $student->username);
         $this->assertSame('Nombre actualizado', $student->nombre);

@@ -14,7 +14,6 @@ class CatalogController extends Controller
     public function status(Request $request, string $catalog, int $id): RedirectResponse
     {
         $table = $this->table($catalog);
-        abort_if($table === 'genero', 405, 'El catálogo de géneros no admite baja en su esquema histórico.');
         abort_unless(DB::table($table)->find($id), 404);
         $data = $request->validate(['estado' => ['required', 'boolean']]);
         if ($table === 'grupo') {
@@ -27,7 +26,7 @@ class CatalogController extends Controller
 
     private function table(string $catalog): string
     {
-        abort_unless(in_array($catalog, ['licenciatura', 'grupo', 'genero'], true), 404);
+        abort_unless(in_array($catalog, ['licenciatura', 'grupo'], true), 404);
 
         return $catalog;
     }
@@ -53,10 +52,7 @@ class CatalogController extends Controller
         if ($id) {
             abort_unless(DB::table($table)->find($id), 404);
         }
-        $rules = ['nombre' => ['required', 'string', 'max:'.($table === 'genero' ? 50 : 100)]];
-        if ($table !== 'genero') {
-            $rules['estado'] = ['required', 'boolean'];
-        }
+        $rules = ['nombre' => ['required', 'string', 'max:100'], 'estado' => ['required', 'boolean']];
         if ($table === 'grupo') {
             $rules += ['licenciatura_id' => ['required', 'integer', Rule::exists('licenciatura', 'id')->where('estado', 1)], 'periodo' => ['nullable', 'string', 'max:20']];
         }

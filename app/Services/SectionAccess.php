@@ -10,13 +10,13 @@ class SectionAccess
     public static function can(string $section, bool $edit = false): bool
     {
         $user = auth()->user();
-        if (! $user || $user->status !== User::ACTIVE) {
+        if (! $user || $user->status !== User::ACTIVE || ! array_key_exists($section, config('dossier.sections'))) {
             return false;
         }
         if ($user->rol_id === User::ADMIN) {
             return true;
         }
-        if ($user->rol_id !== User::COORDINADOR || ! array_key_exists($section, config('dossier.sections'))) {
+        if ($user->rol_id !== User::COORDINADOR) {
             return false;
         }
         $grant = DB::table('coordinador_permiso')->where('coordinador_id', $user->id)->where('seccion', $section)->first();

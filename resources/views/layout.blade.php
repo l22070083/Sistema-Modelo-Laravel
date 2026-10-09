@@ -27,20 +27,17 @@
         <a href="{{ route('administradores') }}"><x-icon name="users"/>Administradores</a>
         <a href="{{ route('coordinadores') }}"><x-icon name="users"/>Coordinadores</a>
         <a href="{{ route('encuestas') }}"><x-icon name="file"/>Encuestas y preguntas</a>
-        @foreach(['grupo'=>'Grupos','licenciatura'=>'Licenciaturas','genero'=>'Géneros'] as $catalog=>$label)<a href="{{ route('catalogo',$catalog) }}"><x-icon name="school"/>{{ $label }}</a>@endforeach
+        @foreach(['grupo'=>'Grupos','licenciatura'=>'Licenciaturas'] as $catalog=>$label)<a href="{{ route('catalogo',$catalog) }}"><x-icon name="school"/>{{ $label }}</a>@endforeach
     @endif
     <a href="{{ route('notificaciones') }}">Notificaciones ({{ \App\Models\User::pendientes()->count() }})</a>
     <a href="{{ route('panel') }}" class="nav-gold"><x-icon name="grid"/>Mi Panel</a>
     @if(\App\Services\SectionAccess::can('personales'))
         <a href="{{ route('alumnos') }}"><x-icon name="school"/>Alumnos</a><a href="{{ route('expedientes') }}"><x-icon name="folder"/>Expedientes Clínicos</a><a href="{{ route('reportes') }}"><x-icon name="file"/>Reportes</a>
     @endif
-    @if(\App\Services\SectionAccess::can('personales') && \App\Services\SectionAccess::can('clasificacion'))
-        <a class="nav-gold" href="{{ route('alertas') }}"><x-icon name="alert"/>Alertas de Salud</a><a class="nav-cyan" href="{{ route('atencion') }}"><x-icon name="pulse"/>Atención Estudiantil</a><a href="{{ route('resultados') }}">Resultados</a>
-    @endif
     <a href="{{ route('perfil') }}">Mi cuenta</a>
 @else
     <a href="{{ route('mi-expediente') }}" class="{{ request()->routeIs('mi-expediente*','mi-constancia')?'active':'' }}"><x-icon name="file"/>Mi Expediente</a>
-    <a href="{{ route('encuesta.responder') }}">Encuesta de salud</a><a href="{{ route('resultados') }}">Mis resultados</a><a href="{{ route('perfil') }}">Mi perfil</a>
+    <a href="{{ route('perfil') }}">Mi perfil</a>
 @endif
 @else
 <a href="{{ route('registro') }}">Registrarse</a>

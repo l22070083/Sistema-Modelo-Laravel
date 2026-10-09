@@ -27,8 +27,11 @@ class LegacyController extends Controller
     {
         $action = $request->query('r');
         abort_unless(is_string($action), 404);
-        if (preg_match('~^(test-chaside|chaside|resultado)/~', $action) || $action === 'encuesta/index-chaside') {
-            abort(410, 'CHASIDE está retirado de esta aplicación.');
+        if (($area === 'frontend' && $action === 'encuesta/index') || in_array($action, ['encuesta/lista-alumno', 'encuesta/finalizar', 'encuesta/guardar-respuesta-ajax'], true)) {
+            abort(410, 'La respuesta de encuestas para alumnos ha sido retirada.');
+        }
+        if (preg_match('~^(test-chaside|chaside|resultado|genero|atencion|salud)/~', $action) || in_array($action, ['encuesta/index-chaside', 'reporte/index', 'expediente/clasificar'], true)) {
+            abort(410, 'Este módulo está retirado de esta aplicación.');
         }
         $map = [
             'site/index' => ['home'], 'site/login' => [$area === 'backend' && $request->isMethod('get') ? 'login.administrativo' : 'login'], 'site/logout' => ['logout'],
@@ -40,30 +43,26 @@ class LegacyController extends Controller
             'coordinador/index' => ['coordinadores'], 'coordinador/create' => ['coordinadores'],
             'coordinador/view' => ['coordinador.edit', 'id'], 'coordinador/update' => ['coordinador.edit', 'id'], 'coordinador/permisos' => ['coordinador.edit', 'id'], 'coordinador/asignar-grupo' => ['coordinador.edit', 'id'],
             'coordinador/delete' => ['coordinador.status', 'id'], 'coordinador/reactivar' => ['coordinador.status', 'id'],
-            'encuesta/index' => [$area === 'frontend' ? 'encuesta.responder' : 'encuestas'],
+            'encuesta/index' => ['encuestas'],
             'encuesta/create' => ['encuestas'], 'pregunta/index' => ['encuestas'], 'pregunta/create' => ['encuestas'],
-            'encuesta/index-salud' => ['encuestas'], 'encuesta/lista-alumno' => ['encuesta.responder'],
+            'encuesta/index-salud' => ['encuestas'],
             'encuesta/view' => ['encuestas'], 'encuesta/update' => ['encuestas'], 'pregunta/view' => ['encuestas'], 'pregunta/update' => ['encuestas'],
-            'encuesta/finalizar' => ['encuesta.finalizar', 'id_encuesta'], 'encuesta/guardar-respuesta-ajax' => ['encuesta.autoguardado'],
             'expediente/index' => [$area === 'frontend' ? 'mi-expediente' : 'expedientes'],
             'expediente/ver' => [$area === 'frontend' ? 'mi-expediente' : 'expediente.ver', $area === 'frontend' ? null : 'id'],
             'expediente/editar' => [$area === 'frontend' ? 'mi-expediente.editar' : 'expediente.editar', $area === 'frontend' ? null : 'id'],
             'expediente/llenar' => ['mi-expediente.editar'], 'expediente/constancia' => [$area === 'frontend' ? 'mi-constancia' : 'expediente.constancia', $area === 'frontend' ? null : 'id'],
             'expediente/crear' => ['expediente.crear', 'user_id'],
-            'atencion/index' => ['atencion'], 'reporte/index' => ['alertas'], 'salud/index' => ['resultados'], 'salud/resultado' => ['resultados', 'alumno_id'],
             'coordinador-panel/index' => ['panel'],
         ];
-        foreach (['licenciatura', 'genero', 'grupo'] as $catalog) {
+        foreach (['licenciatura', 'grupo'] as $catalog) {
             $map[$catalog.'/index'] = ['catalogo', null, ['catalog' => $catalog]];
             $map[$catalog.'/create'] = ['catalogo', null, ['catalog' => $catalog]];
             $map[$catalog.'/update'] = ['catalogo.edit', 'id', ['catalog' => $catalog]];
             $map[$catalog.'/view'] = ['catalogo.edit', 'id', ['catalog' => $catalog]];
-            if ($catalog !== 'genero') {
-                $map[$catalog.'/delete'] = ['catalogo.status', 'id', ['catalog' => $catalog]];
-                $map[$catalog.'/reactivar'] = ['catalogo.status', 'id', ['catalog' => $catalog]];
-            }
+            $map[$catalog.'/delete'] = ['catalogo.status', 'id', ['catalog' => $catalog]];
+            $map[$catalog.'/reactivar'] = ['catalogo.status', 'id', ['catalog' => $catalog]];
         }
-        if (in_array($action, ['expediente/delete', 'expediente/archivar', 'expediente/restaurar', 'expediente/agregar-nota', 'expediente/clasificar', 'expediente/bloqueo'], true)) {
+        if (in_array($action, ['expediente/delete', 'expediente/archivar', 'expediente/restaurar', 'expediente/agregar-nota', 'expediente/bloqueo'], true)) {
             $kind = ['delete' => 'archivar', 'agregar-nota' => 'nota'][basename($action)] ?? basename($action);
             $map[$action] = ['expediente.accion', 'id', ['action' => $kind]];
         }
@@ -77,11 +76,8 @@ class LegacyController extends Controller
             $key = $definition[1] === 'token' ? 'token' : (in_array($definition[1], ['alumno_id', 'user_id'], true) ? 'student' : 'id');
             $parameters[$key] = $value;
         }
-        if ($name === 'encuesta.responder' && $request->filled('id_encuesta')) {
-            $parameters['id'] = $request->query('id_encuesta');
-        }
         $body = $request->request->all();
-        foreach (['User', 'SignupForm', 'LoginForm', 'CompletarPerfilForm', 'PasswordResetRequestForm', 'ResetPasswordForm', 'ResendVerificationEmailForm', 'Grupo', 'Genero', 'Licenciatura', 'Encuesta', 'Pregunta'] as $model) {
+        foreach (['User', 'SignupForm', 'LoginForm', 'CompletarPerfilForm', 'PasswordResetRequestForm', 'ResetPasswordForm', 'ResendVerificationEmailForm', 'Grupo', 'Licenciatura', 'Encuesta', 'Pregunta'] as $model) {
             if (isset($body[$model]) && is_array($body[$model])) {
                 $body = array_merge($body, $body[$model]);
                 unset($body[$model]);
@@ -106,9 +102,6 @@ class LegacyController extends Controller
         }
         if (isset($body['nota_seguimiento'])) {
             $body['nota'] = $body['nota_seguimiento'];
-        }
-        if (isset($body['categoria_manual'])) {
-            $body['categorias'] = $body['categoria_manual'];
         }
         if ($action === 'coordinador/delete') {
             $body['status'] = 0;

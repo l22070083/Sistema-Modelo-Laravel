@@ -53,29 +53,24 @@ class RolePanelTest extends TestCase
         $this->assertSame(10, $candidate->status);
         $this->assertNull($candidate->verification_token);
         $this->assertNotSame($key, $candidate->auth_key);
-        $this->assertSame(5, DB::table('coordinador_permiso')->where('coordinador_id', $candidate->id)->count());
+        $this->assertSame(4, DB::table('coordinador_permiso')->where('coordinador_id', $candidate->id)->count());
         $this->assertSame(0, DB::table('coordinador_permiso')->where('coordinador_id', $candidate->id)->sum('puede_ver'));
         $this->assertDatabaseHas('auditoria_sistema', ['actor_id' => $admin->id, 'evento' => 'DESIGNACION_COORDINADOR', 'motivo' => $data['motivo']]);
         $this->post('/coordinadores/designar', ['user_id' => $admin->id, 'motivo' => 'No cambiar administradores'])->assertNotFound();
     }
 
-    public function test_coordinator_dashboard_does_not_leak_ungranted_student_or_health_data(): void
+    public function test_coordinator_dashboard_does_not_leak_ungranted_student_or_clinical_data(): void
     {
         $admin = User::factory()->create(['rol_id' => 1]);
         $coord = User::factory()->create(['rol_id' => 2]);
         $student = User::factory()->create(['nombre' => 'Alumno reservado']);
         DB::table('expediente_alumno')->insert(['user_id' => $student->id, 'nombres' => $student->nombre, 'apellidos' => 'Prueba',
-            'categoria_atencion' => '["Salud Física"]', 'categoria_manual' => '["Atención Emocional"]', 'atencion_prioritaria' => 1,
             'notas_coordinador' => 'SEGUIMIENTO PRIVADO', 'bloqueado' => 0, 'created_at' => now(), 'updated_at' => now()]);
         $this->actingAs($coord)->get('/panel')->assertOk()->assertDontSee($student->nombre)->assertDontSee('Distribución Global');
         $this->get('/coordinadores')->assertForbidden();
         $this->grant($coord, $admin, 'personales');
-        $this->get('/panel')->assertOk()->assertSee($student->nombre)->assertDontSee('Atención Emocional')->assertDontSee('SEGUIMIENTO PRIVADO');
-        $this->grant($coord, $admin, 'clasificacion');
-        $response = $this->get('/panel')->assertOk()->assertSee('Distribución Global');
-        $this->assertSame(1, $response->viewData('metrics')['prioritaria']);
-        $this->assertSame(1, $response->viewData('categories')['Atención Emocional']);
-        $this->assertSame(0, $response->viewData('categories')['Salud Física']);
+        $response = $this->get('/panel')->assertOk()->assertSee($student->nombre)->assertDontSee('SEGUIMIENTO PRIVADO')->assertDontSee('Clasificación');
+        $this->assertSame(['alumnos' => 1, 'expedientes' => 1, 'pendientes' => 0], $response->viewData('metrics'));
         $this->get('/panel?q=Alumno')->assertOk()->assertSee($student->nombre);
         $this->get('/panel?q=Inexistente')->assertOk()->assertDontSee($student->nombre);
     }
@@ -226,11 +221,11 @@ class RolePanelTest extends TestCase
     {
         $student = User::factory()->create();
         $id = DB::table('expediente_alumno')->insertGetId(['user_id' => $student->id, 'nombres' => $student->nombre, 'apellidos' => $student->apellidos,
-            'categoria_atencion' => '["Sin dato de alarma"]', 'categoria_manual' => '["Salud Física"]', 'motivo_clasificacion' => 'MOTIVO PRIVADO', 'notas_coordinador' => 'NOTA PRIVADA',
+            'notas_coordinador' => 'NOTA PRIVADA',
             'bloqueado' => 1, 'created_at' => now(), 'updated_at' => now()]);
         DB::table('expediente_historial')->insert(['expediente_id' => $id, 'user_id' => $student->id, 'accion' => 'NOTA', 'detalles' => 'HISTORIAL PRIVADO', 'fecha' => now()]);
         $this->actingAs($student)->get('/mi-expediente')->assertOk()->assertSee('Expediente Protegido por Coordinación')
-            ->assertSee('Salud Física')->assertSee('Historial de Revisiones')->assertDontSee('MOTIVO PRIVADO')->assertDontSee('NOTA PRIVADA')->assertDontSee('HISTORIAL PRIVADO');
+            ->assertSee('Historial de Revisiones')->assertDontSee('Clasificación')->assertDontSee('NOTA PRIVADA')->assertDontSee('HISTORIAL PRIVADO');
         $this->get('/mi-expediente/editar')->assertRedirect('/perfil');
     }
 

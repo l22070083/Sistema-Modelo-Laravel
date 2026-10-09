@@ -541,6 +541,9 @@
                                         <span>👁</span>
                                         Ver expediente
                                     </a>
+                                    @if(auth()->user()->rol_id===\App\Models\User::ADMIN)
+                                    <a class="btn btn-outline-danger btn-sm ms-2" href="{{ route('expediente.ver', $row->id) }}#eliminar-expediente">Eliminar</a>
+                                    @endif
 
                                 </td>
 

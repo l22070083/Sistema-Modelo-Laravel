@@ -5,12 +5,12 @@ namespace Tests\Feature;
 use App\Http\Controllers\DossierController;
 use App\Mail\AccountLink;
 use App\Models\User;
-use App\Services\DossierRules;
 use App\Services\MicrosoftIdentity;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class DomainMigrationTest extends TestCase
@@ -19,18 +19,15 @@ class DomainMigrationTest extends TestCase
 
     private int $degree;
 
-    private int $gender;
-
     protected function setUp(): void
     {
         parent::setUp();
         $this->degree = DB::table('licenciatura')->insertGetId(['nombre' => 'Licenciatura de prueba', 'estado' => 1]);
-        $this->gender = DB::table('genero')->insertGetId(['nombre' => 'Otro']);
     }
 
     private function student(): User
     {
-        return User::factory()->create(['licenciatura_id' => $this->degree, 'genero_id' => $this->gender]);
+        return User::factory()->create(['licenciatura_id' => $this->degree]);
     }
 
     private function admin(): User
@@ -55,8 +52,8 @@ class DomainMigrationTest extends TestCase
             }
         }
 
-        return array_merge($data, ['nombres' => $student->nombre, 'apellidos' => $student->apellidos, 'fecha_nacimiento' => '2000-01-02', 'genero' => 'Otro', 'estado_civil' => 'Soltero(a)',
-            'licenciatura_id' => $this->degree, 'apnp_tipo_sangre' => 'O', 'apnp_factor_rh' => 'Positivo (+)', 'q10_estado_emocional' => 'Favorable', 'q11_necesita_apoyo' => ['Ninguno']]);
+        return array_merge($data, ['nombres' => $student->nombre, 'apellidos' => $student->apellidos, 'fecha_nacimiento' => '2000-01-02', 'estado_civil' => 'Soltero(a)',
+            'licenciatura_id' => $this->degree, 'telefono' => '0123456789', 'contacto_emergencia_telefono' => '9876543210', 'apnp_tipo_sangre' => 'O', 'apnp_factor_rh' => 'Positivo (+)', 'q10_estado_emocional' => 'Favorable', 'q11_necesita_apoyo' => ['Ninguno']]);
     }
 
     private function createDossier(User $student): int
@@ -64,6 +61,79 @@ class DomainMigrationTest extends TestCase
         $this->actingAs($student)->post('/mi-expediente/editar', ['datos' => $this->dossier($student)])->assertRedirect('/mi-expediente');
 
         return DB::table('expediente_alumno')->where('user_id', $student->id)->value('id');
+    }
+
+    public function test_dossier_prefills_student_names_and_keeps_saved_or_posted_names(): void
+    {
+        $student = $this->student();
+        $student->update(['nombre' => 'Ana María', 'apellidos' => 'López Pérez']);
+        $form = $this->actingAs($student)->get('/mi-expediente/editar')->assertOk()->assertDontSee('datos[ocupacion]', false);
+        $document = new \DOMDocument;
+        @$document->loadHTML($form->getContent());
+        $xpath = new \DOMXPath($document);
+        $this->assertSame('Ana María', $xpath->query('//input[@id="nombres"]')->item(0)->getAttribute('value'));
+        $this->assertSame('López Pérez', $xpath->query('//input[@id="apellidos"]')->item(0)->getAttribute('value'));
+        $this->assertTrue($xpath->query('//input[@id="edad-calculada"]')->item(0)->hasAttribute('readonly'));
+        foreach (['telefono', 'contacto_emergencia_telefono'] as $field) {
+            $this->assertSame('[0-9]{10}', $xpath->query('//input[@id="'.$field.'"]')->item(0)->getAttribute('pattern'));
+        }
+        $id = $this->createDossier($student);
+        DB::table('expediente_alumno')->where('id', $id)->update(['nombres' => 'Nombre guardado']);
+        $this->get('/mi-expediente/editar')->assertOk()->assertSee('value="Nombre guardado"', false);
+        $this->withSession(['_old_input' => ['datos' => ['nombres' => 'Nombre corregido']]])->get('/mi-expediente/editar')->assertOk()->assertSee('value="Nombre corregido"', false);
+        $other = $this->student();
+        $other->update(['nombre' => 'Estudiante destino', 'apellidos' => 'Apellido destino']);
+        $this->withSession(['_old_input' => []])->actingAs($this->admin())->get('/alumnos/'.$other->id.'/expediente')->assertOk()->assertSee('value="Estudiante destino"', false)->assertSee('value="Apellido destino"', false);
+        $this->assertFalse(Schema::hasColumn('expediente_alumno', 'ocupacion'));
+    }
+
+    public function test_dossier_requires_ten_digit_phones_and_calculates_age_from_birth_date(): void
+    {
+        $student = $this->student();
+        $this->actingAs($student);
+        foreach (['telefono', 'contacto_emergencia_telefono'] as $field) {
+            foreach (['123456789', '12345678901', '+123456789', '12345 7890', 'abcdefghij'] as $phone) {
+                $data = array_replace($this->dossier($student), [$field => $phone]);
+                $this->post('/mi-expediente/editar', ['datos' => $data])->assertSessionHasErrors($field);
+                $this->assertDatabaseMissing('expediente_alumno', ['user_id' => $student->id]);
+            }
+        }
+        $this->travelTo(\Carbon\Carbon::parse('2026-10-08 12:00:00'));
+        try {
+            $data = array_replace($this->dossier($student), ['fecha_nacimiento' => '2000-10-09']);
+            $this->post('/mi-expediente/editar', ['datos' => $data])->assertRedirect('/mi-expediente');
+            $this->assertDatabaseHas('expediente_alumno', ['user_id' => $student->id, 'edad' => 25, 'telefono' => '0123456789']);
+            $record = DB::table('expediente_alumno')->where('user_id', $student->id)->first();
+            $data['fecha_nacimiento'] = '2000-10-08';
+            $this->post('/mi-expediente/editar', ['datos' => $data, 'version' => DossierController::fingerprint($record)])->assertRedirect();
+            $this->assertDatabaseHas('expediente_alumno', ['user_id' => $student->id, 'edad' => 26]);
+            $data['ocupacion'] = 'Campo retirado';
+            $this->post('/mi-expediente/editar', ['datos' => $data])->assertForbidden();
+        } finally { $this->travelBack(); }
+    }
+
+    public function test_wizard_requires_explicit_answers_and_clears_details_that_no_longer_apply(): void
+    {
+        $student = $this->student();
+        $student->update(['nombre' => 'Alumno de prueba', 'apellidos' => 'Vista previa']);
+        $form = $this->actingAs($student)->get('/mi-expediente/editar')->assertOk()
+            ->assertSee('¿Tienes alguna alergia diagnosticada?')->assertSee('Revisar y guardar')->assertDontSee('Responder encuesta de salud');
+        $document = new \DOMDocument;
+        @$document->loadHTML($form->getContent());
+        $xpath = new \DOMXPath($document);
+        $this->assertSame(0, $xpath->query('//input[@type="radio" and @checked]')->length);
+        $this->assertSame(2, $xpath->query('//input[@name="datos[q1_cond_fisica]" and @required]')->length);
+        if (getenv('DOSSIER_UX_PREVIEW') === '1') {
+            file_put_contents(base_path('../dossier-wizard-preview.html'), $form->getContent());
+        }
+        $data = array_replace($this->dossier($student), ['q1_cond_fisica' => 1, 'q1_cond_fisica_detalle' => 'Detalle anterior', 'q11_necesita_apoyo' => ['Otro'], 'q11_necesita_apoyo_otro' => 'Apoyo anterior']);
+        $this->post('/mi-expediente/editar', ['datos' => $data])->assertRedirect();
+        $record = DB::table('expediente_alumno')->where('user_id', $student->id)->first();
+        $data['q1_cond_fisica'] = 0;
+        $data['q11_necesita_apoyo'] = ['Ninguno'];
+        unset($data['q1_cond_fisica_detalle'], $data['q11_necesita_apoyo_otro']);
+        $this->post('/mi-expediente/editar', ['datos' => $data, 'version' => DossierController::fingerprint($record)])->assertRedirect();
+        $this->assertDatabaseHas('expediente_alumno', ['id' => $record->id, 'q1_cond_fisica' => 0, 'q1_cond_fisica_detalle' => null, 'q11_necesita_apoyo_otro' => null]);
     }
 
     public function test_dossier_form_and_pdf_keep_blood_in_personal_data_and_remove_antecedents(): void
@@ -145,7 +215,7 @@ class DomainMigrationTest extends TestCase
     public function test_registration_email_verification_and_reset_preserve_pending_approval(): void
     {
         Mail::fake();
-        $data = ['nombre' => 'Registro', 'apellidos' => 'Prueba', 'username' => 'registro', 'email' => 'registro@example.com', 'matricula' => '0000987', 'licenciatura_id' => $this->degree, 'genero_id' => $this->gender, 'password' => 'ClaveModelo!2026', 'password_confirmation' => 'ClaveModelo!2026', 'rol_id' => 1, 'status' => 10];
+        $data = ['nombre' => 'Registro', 'apellidos' => 'Prueba', 'username' => 'registro', 'email' => 'registro@example.com', 'matricula' => '0000987', 'licenciatura_id' => $this->degree, 'password' => 'ClaveModelo!2026', 'password_confirmation' => 'ClaveModelo!2026', 'rol_id' => 1, 'status' => 10];
         $this->post('/registro', $data)->assertRedirect('/login');
         $user = User::where('username', 'registro')->firstOrFail();
         $this->assertSame('0000987', $user->matricula);
@@ -192,27 +262,32 @@ class DomainMigrationTest extends TestCase
         $this->post('/coordinadores/'.$coord->id.'/estado', ['status' => 10])->assertRedirect();
     }
 
-    public function test_survey_rejects_chaside_saves_answers_and_requires_completion(): void
+    public function test_student_survey_responses_are_retired_but_administration_and_saved_answers_remain(): void
     {
-        $survey = DB::table('encuesta')->insertGetId(['titulo' => 'Salud', 'tipo_test' => 'salud', 'estado' => 1, 'created_at' => time(), 'updated_at' => time()]);
-        $first = DB::table('pregunta')->insertGetId(['encuesta_id' => $survey, 'planteamiento' => 'Pregunta A', 'tipo_riesgo' => 'alto', 'status' => 1]);
-        $second = DB::table('pregunta')->insertGetId(['encuesta_id' => $survey, 'planteamiento' => 'Pregunta B', 'tipo_riesgo' => 'bajo', 'status' => 1]);
-        $old = DB::table('encuesta')->insertGetId(['titulo' => 'Histórico', 'tipo_test' => 'chaside', 'estado' => 1, 'created_at' => time(), 'updated_at' => time()]);
-        $oldQuestion = DB::table('pregunta')->insertGetId(['encuesta_id' => $old, 'planteamiento' => 'Fuera del alcance', 'status' => 1]);
+        $survey = DB::table('encuesta')->insertGetId(['titulo' => 'Encuesta conservada', 'tipo_test' => 'salud', 'estado' => 1]);
+        $question = DB::table('pregunta')->insertGetId(['encuesta_id' => $survey, 'planteamiento' => 'Pregunta conservada', 'status' => 1]);
         $student = $this->student();
-        $this->actingAs($student)->get('/encuestas/responder/'.$survey)->assertOk()->assertSee('Pregunta A');
-        $this->postJson('/encuestas/autoguardado', ['pregunta_id' => $oldQuestion, 'respuesta' => 'Si'])->assertStatus(422);
-        $this->postJson('/encuestas/autoguardado', ['pregunta_id' => $first, 'respuesta' => 'Otro'])->assertStatus(422);
-        $this->postJson('/encuestas/autoguardado', ['pregunta_id' => $first, 'respuesta' => 'Si'])->assertOk();
-        $this->postJson('/encuestas/autoguardado', ['pregunta_id' => $first, 'respuesta' => 'No'])->assertOk();
-        $this->assertSame(1, DB::table('respuesta_alumno')->where('pregunta_id', $first)->count());
-        $this->get('/encuestas/'.$survey.'/finalizar')->assertRedirect('/encuestas/responder/'.$survey);
-        $this->post('/encuestas/responder/'.$survey, ['respuestas' => [$first => 'Si', $second => 'No']])->assertRedirect('/encuestas/'.$survey.'/finalizar');
-        $this->get('/encuestas/'.$survey.'/finalizar')->assertOk()->assertSee('Encuesta completada');
-        $this->assertSame(0, DB::table('resultados_salud')->count());
+        DB::table('respuesta_alumno')->insert(['user_id' => $student->id, 'pregunta_id' => $question, 'respuesta' => 'Si', 'fecha_registro' => now()]);
+        $before = DB::table('respuesta_alumno')->get()->map(fn($row) => (array) $row)->all();
+        $this->actingAs($student)->get('/inicio')->assertOk()->assertSee('Mi expediente')->assertDontSee('Responder encuesta de salud')->assertDontSee('Para comenzar la encuesta');
+        foreach ([$student, $this->admin(), $this->coordinator()] as $actor) {
+            $this->actingAs($actor)->get('/encuestas/responder/'.$survey)->assertNotFound();
+            $this->post('/encuestas/responder/'.$survey, ['respuestas' => [$question => 'No']])->assertNotFound();
+            $this->postJson('/encuestas/autoguardado', ['pregunta_id' => $question, 'respuesta' => 'No'])->assertNotFound();
+            $this->get('/encuestas/'.$survey.'/finalizar')->assertNotFound();
+        }
+        foreach (['encuesta/index', 'encuesta/lista-alumno', 'encuesta/finalizar', 'encuesta/guardar-respuesta-ajax'] as $oldAction) {
+            $this->get('/frontend/web/index.php?r='.$oldAction.'&id_encuesta='.$survey)->assertStatus(410);
+            $this->post('/frontend/web/index.php?r='.$oldAction, ['respuestas' => [$question => 'No']])->assertStatus(410);
+        }
+        $this->assertSame($before, DB::table('respuesta_alumno')->get()->map(fn($row) => (array) $row)->all());
+        $this->actingAs($this->admin())->get('/encuestas')->assertOk()->assertSee('Encuesta conservada')->assertSee('Pregunta conservada');
+        $this->get('/backend/web/index.php?r=encuesta/index')->assertOk();
+        $this->assertDatabaseHas('encuesta', ['id' => $survey, 'titulo' => 'Encuesta conservada']);
+        $this->assertDatabaseHas('pregunta', ['id' => $question, 'planteamiento' => 'Pregunta conservada']);
     }
 
-    public function test_dossier_sections_privacy_lock_history_and_classification(): void
+    public function test_dossier_sections_privacy_lock_and_history(): void
     {
         $student = $this->student();
         $id = $this->createDossier($student);
@@ -228,9 +303,6 @@ class DomainMigrationTest extends TestCase
         $this->actingAs($student)->get('/mi-expediente/editar')->assertForbidden();
         $other = $this->student();
         $this->actingAs($other)->get('/expedientes/'.$id)->assertForbidden();
-        $classified = DossierRules::classify(['q1_cond_fisica' => 1, 'q2_cond_mental' => 1, 'q11_necesita_apoyo' => '["De aprendizaje"]']);
-        $this->assertSame(['Salud Física', 'Atención Psicopedagógica', 'Atención Emocional'], json_decode($classified['categoria_atencion'], true));
-        $this->assertSame(1, $classified['atencion_prioritaria']);
     }
 
     public function test_dossier_rejects_stale_edits_and_inconsistent_question_details(): void
@@ -248,42 +320,36 @@ class DomainMigrationTest extends TestCase
         $this->assertDatabaseHas('expediente_alumno', ['id' => $id, 'q12_info_adicional' => 'Cambio concurrente']);
     }
 
-    public function test_institutional_risk_overrides_automatic_categories_and_survives_student_changes(): void
+    public function test_retired_modules_are_absent_and_clinical_answers_remain_editable(): void
     {
-        foreach (['q1_cond_fisica', 'q3_tratamiento', 'q4_crisis_medica', 'q5_alergia'] as $field) {
-            $this->assertSame(['Salud Física'], json_decode(DossierRules::classify([$field => 1])['categoria_atencion'], true));
-        }
-        foreach (['q2_cond_mental', 'q9_acomp_psicologico'] as $field) {
-            $this->assertSame(['Atención Emocional'], json_decode(DossierRules::classify([$field => 1])['categoria_atencion'], true));
-        }
-        foreach (['q6_diag_aprendizaje', 'q7_dictamen_psico'] as $field) {
-            $this->assertSame(['Atención Psicopedagógica'], json_decode(DossierRules::classify([$field => 1])['categoria_atencion'], true));
-        }
-        $this->assertSame(['Atención Emocional'], json_decode(DossierRules::classify(['q10_estado_emocional' => 'Desfavorable'])['categoria_atencion'], true));
-        $this->assertSame(['Atención Emocional'], json_decode(DossierRules::classify(['q11_necesita_apoyo' => '["Psicológico"]'])['categoria_atencion'], true));
-        $this->assertSame(['Atención Psicopedagógica'], json_decode(DossierRules::classify(['q11_necesita_apoyo' => '["De aprendizaje"]'])['categoria_atencion'], true));
         $student = $this->student();
         $id = $this->createDossier($student);
-        $coord = $this->coordinator();
-        $assessment = ['categorias' => ['Atención Emocional'], 'prioritaria' => 1, 'motivo' => 'Valoración del coordinador'];
-        $this->actingAs($coord)->post('/expedientes/'.$id.'/clasificar', $assessment)->assertForbidden();
-        $admin = $this->admin();
-        foreach (['personales', 'clasificacion'] as $section) {
-            DB::table('coordinador_permiso')->insert(['coordinador_id' => $coord->id, 'seccion' => $section, 'puede_ver' => 1, 'puede_editar' => 1, 'otorgado_por' => $admin->id, 'updated_at' => now()]);
-        }
-        $this->post('/expedientes/'.$id.'/clasificar', array_diff_key($assessment, ['motivo' => true]))->assertSessionHasErrors('motivo');
-        $this->post('/expedientes/'.$id.'/clasificar', $assessment)->assertRedirect();
         $record = DB::table('expediente_alumno')->find($id);
-        $this->assertSame($coord->id, $record->clasificado_por);
-        $this->assertSame(1, $record->atencion_prioritaria);
-        $this->assertDatabaseHas('auditoria_sistema', ['evento' => 'CLASIFICAR', 'actor_id' => $coord->id, 'motivo' => $assessment['motivo']]);
-        $this->get('/resultados/'.$student->id)->assertOk()->assertSee('Valoración institucional')->assertSee('Atención Emocional');
-        $this->actingAs($student)->post('/expedientes/'.$id.'/clasificar', $assessment)->assertForbidden();
-        $this->post('/mi-expediente/editar', ['datos' => $this->dossier($student), 'version' => DossierController::fingerprint($record)])->assertRedirect();
-        $current = DB::table('expediente_alumno')->find($id);
-        $this->assertSame(['Sin dato de alarma'], json_decode($current->categoria_atencion, true));
-        $this->assertSame(['Atención Emocional'], json_decode($current->categoria_manual, true));
-        $this->assertSame(1, $current->atencion_prioritaria);
+        $data = array_replace($this->dossier($student), ['q1_cond_fisica' => 1, 'q1_cond_fisica_detalle' => 'Condición documentada', 'q11_necesita_apoyo' => ['Psicológico']]);
+        $this->post('/mi-expediente/editar', ['datos' => $data, 'version' => DossierController::fingerprint($record)])->assertRedirect();
+        $this->assertDatabaseHas('expediente_alumno', ['id' => $id, 'q1_cond_fisica' => 1, 'q1_cond_fisica_detalle' => 'Condición documentada']);
+        $this->assertSame(['Psicológico'], json_decode(DB::table('expediente_alumno')->where('id', $id)->value('q11_necesita_apoyo'), true));
+        $this->get('/mi-expediente')->assertOk()->assertDontSee('Clasificación')->assertDontSee('Atención prioritaria')->assertDontSee('Sexo / Género');
+        $admin = $this->admin();
+        $this->actingAs($admin)->get('/panel')->assertOk()->assertSee('Encuestas y preguntas')->assertDontSee('Alertas de Salud')->assertDontSee('Atención Estudiantil')->assertDontSee('Géneros')->assertDontSee('Resultados');
+        foreach (['/atencion', '/alertas', '/resultados', '/resultados/'.$student->id, '/catalogos/genero'] as $path) {
+            $this->get($path)->assertNotFound();
+        }
+        $this->post('/expedientes/'.$id.'/clasificar', ['motivo' => 'Módulo retirado'])->assertNotFound();
+        $coord = $this->coordinator();
+        $this->get('/coordinadores/'.$coord->id)->assertOk()->assertDontSee('permisos[clasificacion]');
+        $this->post('/coordinadores/'.$coord->id.'/permisos', ['motivo' => 'Sección retirada', 'permisos' => ['clasificacion' => ['ver' => 1]]])->assertSessionHasErrors('permisos');
+        foreach (['salud', 'atencion'] as $type) {
+            $this->post('/reportes/exportar', ['tipo' => $type, 'formato' => 'pdf', 'motivo' => 'Reporte retirado'])->assertSessionHasErrors('tipo');
+        }
+        foreach (['genero', 'resultados_salud', 'resultados_chaside'] as $table) {
+            $this->assertFalse(Schema::hasTable($table));
+        }
+        foreach (['genero', 'categoria_atencion', 'categoria_manual', 'atencion_prioritaria', 'motivo_clasificacion', 'clasificado_por'] as $field) {
+            $this->assertFalse(Schema::hasColumn('expediente_alumno', $field));
+        }
+        $this->assertFalse(Schema::hasColumn('user', 'genero_id'));
+        $this->assertFalse(Schema::hasColumn('pregunta', 'tipo_riesgo'));
     }
 
     public function test_post_routes_require_csrf_outside_test_mode(): void
@@ -323,7 +389,10 @@ class DomainMigrationTest extends TestCase
         $this->get('/frontend/web/index.php?r=site/resend-verification-email')->assertOk();
         config(['services.microsoft.enabled' => false]);
         $this->get('/login')->assertSee('Acceso institucional pendiente de activación.')->assertDontSee('href="'.route('microsoft.login').'"', false);
-        $this->get('/backend/web/index.php?r=chaside/index')->assertStatus(410);
+        foreach (['chaside/index', 'genero/index', 'atencion/index', 'reporte/index', 'salud/index', 'salud/resultado', 'resultado/index', 'expediente/clasificar'] as $retired) {
+            $this->get('/backend/web/index.php?r='.$retired)->assertStatus(410);
+            $this->post('/backend/web/index.php?r='.$retired)->assertStatus(410);
+        }
         $this->get('/backend/web/index.php?r=accion-inventada')->assertNotFound();
         $this->actingAs($this->coordinator())->post('/backend/web/index.php?r=coordinador/create', ['User' => ['nombre' => 'No autorizado']])->assertForbidden();
         $this->actingAs($this->admin())->post('/backend/web/index.php?r=licenciatura/create', ['Licenciatura' => ['nombre' => 'Legado', 'estado' => 1]])->assertRedirect();
@@ -338,6 +407,9 @@ class DomainMigrationTest extends TestCase
         $survey = DB::table('encuesta')->insertGetId(['titulo' => 'Salud', 'tipo_test' => 'salud', 'estado' => 1, 'created_at' => time(), 'updated_at' => time()]);
         $this->post('/backend/web/index.php?r=encuesta/update&id='.$survey, ['Encuesta' => ['titulo' => 'Actualizada', 'estado' => 1, 'tipo_test' => 'chaside']])->assertRedirect();
         $this->assertDatabaseHas('encuesta', ['id' => $survey, 'titulo' => 'Actualizada', 'tipo_test' => 'salud']);
+        $this->get('/encuestas')->assertOk()->assertDontSee('name="tipo_riesgo"', false);
+        $this->post('/preguntas', ['encuesta_id' => $survey, 'planteamiento' => 'Pregunta sin evaluación de riesgo', 'status' => 1])->assertRedirect();
+        $this->assertDatabaseHas('pregunta', ['encuesta_id' => $survey, 'planteamiento' => 'Pregunta sin evaluación de riesgo']);
         $student = $this->student();
         $this->post('/backend/web/index.php?r=expediente/crear&user_id='.$student->id, ['ExpedienteAlumno' => $this->dossier($student), 'motivo_cambio' => 'Compatibilidad Yii'])->assertRedirect();
         $this->assertDatabaseHas('expediente_alumno', ['user_id' => $student->id]);
